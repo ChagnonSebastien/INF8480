@@ -77,7 +77,7 @@ public class Client {
 		{
 			String login = openSession(scanner);
 			
-		} catch (ServerNotActiveException e) {
+		} catch (RemoteException e) {
 			e.printStackTrace();
 		}
 	}
@@ -86,7 +86,7 @@ public class Client {
 
 	}
 	
-	private String openSession(Scanner scanner) throws ServerNotActiveException {
+	private String openSession(Scanner scanner) throws RemoteException {
 		String login;
 		boolean isConnected = false;
 		do {

@@ -22,4 +22,4 @@ java -cp "$basepath"/server.jar:"$basepath"/shared.jar \
   -Djava.rmi.server.codebase=file:"$basepath"/shared.jar \
   -Djava.security.policy="$basepath"/policy \
   -Djava.rmi.server.hostname="$IPADDR" \
-  ca.polymtl.inf8480.tp1.server.Server
+  ca.polymtl.inf8480.tp1.exo2.server.Server

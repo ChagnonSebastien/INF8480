@@ -1,6 +1,7 @@
 package ca.polymtl.inf8480.tp1.exo2.server;
 
 import java.rmi.ConnectException;
+import java.rmi.RemoteException;
 import java.rmi.registry.LocateRegistry;
 import java.rmi.registry.Registry;
 import java.rmi.server.RemoteServer;
@@ -13,10 +14,6 @@ import ca.polymtl.inf8480.tp1.exo2.shared.ServerInterface;
 
 public class Server extends RemoteServer implements ServerInterface {
 	
-	/**
-	 * 
-	 */
-	private static final long serialVersionUID = 6545336437148340180L;
 
 	public static void main(String[] args) {
 		Server server = new Server();
@@ -63,8 +60,7 @@ public class Server extends RemoteServer implements ServerInterface {
 	 * Méthode pour s'authentifier et ouvrir une session au niveau serveur de messagerie
 	 */
 	@Override
-	public boolean openSession(String login, String password) throws ServerNotActiveException {
-		System.out.println(this.getClientHost());
+	public boolean openSession(String login, String password) throws RemoteException {
 		
 		if (!this.users.containsKey(login))
 			return false;
