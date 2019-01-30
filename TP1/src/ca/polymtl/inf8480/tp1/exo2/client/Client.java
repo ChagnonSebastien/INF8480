@@ -24,8 +24,7 @@ public class Client {
 		client.run();
 	}
 
-	private ServerInterface localServerStub = null;
-	private ServerInterface distantServerStub = null;
+	private ServerInterface serverStub = null;
 	private String login;
 
 	public Client(String distantServerHostname) {
@@ -35,22 +34,18 @@ public class Client {
 			System.setSecurityManager(new SecurityManager());
 		}
 
-		localServerStub = loadServerStub("127.0.0.1");
-
-		/*if (distantServerHostname != null) {
-			distantServerStub = loadServerStub(distantServerHostname);
-		}*/
+		if (distantServerHostname != null) {
+			serverStub = loadServerStub(distantServerHostname);
+		}
+		else {
+			serverStub = loadServerStub("127.0.0.1");
+		}
 	}
 
 	private void run() {
-
-		if (localServerStub != null) {
-			appelRMILocal();
+		if (serverStub != null) {
+			appelRMI();
 		}
-
-		/*if (distantServerStub != null) {
-			appelRMIDistant();
-		}*/
 	}
 
 	private ServerInterface loadServerStub(String hostname) {
@@ -71,20 +66,20 @@ public class Client {
 		return stub;
 	}
 
-	private void appelRMILocal() {
+	private void appelRMI() {
 		try (
 				Scanner scanner = new Scanner(System.in);
 			)
 		{
+			// Ouverture de session
 			this.login = openSession(scanner);
+			
+			// Envoi de requêtes
+			
 			
 		} catch (RemoteException e) {
 			e.printStackTrace();
 		}
-	}
-
-	private void appelRMIDistant() {
-
 	}
 	
 	private String openSession(Scanner scanner) throws RemoteException {
@@ -98,7 +93,7 @@ public class Client {
 			System.out.println("Veuillez entrer votre mot de passe:");
 			String password = scanner.nextLine();
 			
-			result = localServerStub.openSession(login, password);
+			result = serverStub.openSession(login, password);
 			isLoggedIn = result.equals(login);
 			
 			if (isLoggedIn) {

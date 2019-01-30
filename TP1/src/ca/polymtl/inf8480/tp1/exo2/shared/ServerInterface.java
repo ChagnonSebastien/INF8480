@@ -8,4 +8,6 @@ public interface ServerInterface extends Remote {
 
 	public String openSession(String login, String password) throws RemoteException;
 	
+	public String getGroupList(long checksum) throws RemoteException;
+	
 }
