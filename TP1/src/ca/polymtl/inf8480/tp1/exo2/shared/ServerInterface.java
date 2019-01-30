@@ -6,7 +6,6 @@ import java.rmi.server.ServerNotActiveException;
 
 public interface ServerInterface extends Remote {
 
-	
-	public boolean openSession(String login, String password) throws RemoteException;
+	public String openSession(String login, String password) throws RemoteException;
 	
 }

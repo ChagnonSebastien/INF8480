@@ -8,13 +8,13 @@ import java.rmi.server.RemoteServer;
 import java.rmi.server.ServerNotActiveException;
 import java.rmi.server.UnicastRemoteObject;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
 
 import ca.polymtl.inf8480.tp1.exo2.shared.ServerInterface;
 
 public class Server extends RemoteServer implements ServerInterface {
 	
-
 	public static void main(String[] args) {
 		Server server = new Server();
 		server.run();
@@ -22,13 +22,16 @@ public class Server extends RemoteServer implements ServerInterface {
 	
 	
 	private Map<String, String> users;
+	private HashSet<String> loggedUsers;
 
 	public Server() {
 		super();
 		this.createUsers();
+		loggedUsers = new HashSet<String>();
 	}
 
 	private void createUsers() {
+		// TODO : Lire le fichier pour populer les utilisateurs
 		this.users = new HashMap<String, String>();
 		this.users.put("seb", "seb");
 		this.users.put("pierre", "pierre");
@@ -57,15 +60,16 @@ public class Server extends RemoteServer implements ServerInterface {
 	}
 
 	/*
-	 * Méthode pour s'authentifier et ouvrir une session au niveau serveur de messagerie
+	 * Methode pour s'authentifier et ouvrir une session au niveau serveur de messagerie
 	 */
 	@Override
-	public boolean openSession(String login, String password) throws RemoteException {
+	public String openSession(String login, String password) throws RemoteException {
 		
-		if (!this.users.containsKey(login))
-			return false;
+		if (!this.users.containsKey(login) || !this.users.get(login).equals(password))
+			return "";
 		
-		return this.users.get(login).equals(password);
+		loggedUsers.add(login);
+		return login;
 	}
 
 }

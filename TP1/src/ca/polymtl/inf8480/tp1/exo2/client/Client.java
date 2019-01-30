@@ -26,6 +26,7 @@ public class Client {
 
 	private ServerInterface localServerStub = null;
 	private ServerInterface distantServerStub = null;
+	private String login;
 
 	public Client(String distantServerHostname) {
 		super();
@@ -60,7 +61,7 @@ public class Client {
 			stub = (ServerInterface) registry.lookup("server");
 		} catch (NotBoundException e) {
 			System.out.println("Erreur: Le nom '" + e.getMessage()
-					+ "' n'est pas défini dans le registre.");
+					+ "' n'est pas defini dans le registre.");
 		} catch (AccessException e) {
 			System.out.println("Erreur: " + e.getMessage());
 		} catch (RemoteException e) {
@@ -75,7 +76,7 @@ public class Client {
 				Scanner scanner = new Scanner(System.in);
 			)
 		{
-			String login = openSession(scanner);
+			this.login = openSession(scanner);
 			
 		} catch (RemoteException e) {
 			e.printStackTrace();
@@ -88,23 +89,26 @@ public class Client {
 	
 	private String openSession(Scanner scanner) throws RemoteException {
 		String login;
-		boolean isConnected = false;
+		String result;
+		boolean isLoggedIn = false;
+		
 		do {
 			System.out.println("Veuillez entrer votre nom d'utilisateur:");
 			login = scanner.nextLine();
 			System.out.println("Veuillez entrer votre mot de passe:");
 			String password = scanner.nextLine();
 			
-			isConnected = localServerStub.openSession(login, password);
+			result = localServerStub.openSession(login, password);
+			isLoggedIn = result.equals(login);
 			
-			if (isConnected) {
-				System.out.println("Bienvenue dans votre boite à courriel " + login);
+			if (isLoggedIn) {
+				System.out.println("Bienvenue dans votre boite a courriel " + login);
 			} else {
 				System.out.println("Erreur lors de la connection");
 			}
 		
-		} while (!isConnected);
+		} while (!isLoggedIn);
 
-		return login;
+		return result;
 	}
 }
