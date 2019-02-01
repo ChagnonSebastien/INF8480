@@ -27,6 +27,11 @@ import ca.polymtl.inf8480.tp1.exo2.shared.ServerInterface;
 
 public class Server extends RemoteServer implements ServerInterface {
 	
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = 3520052702176224119L;
+
 	public static void main(String[] args) {
 		Server server = new Server();
 		server.run();
@@ -55,7 +60,6 @@ public class Server extends RemoteServer implements ServerInterface {
 		}
 	}
 
-	@SuppressWarnings("unchecked")
 	private void getUsers() {
 		File usersFile = new File(currentPath, "users.json");
 
@@ -95,7 +99,6 @@ public class Server extends RemoteServer implements ServerInterface {
 		}
 	}
 	
-	@SuppressWarnings("unchecked")
 	private File getGroupList() {
 		File groupListFile = new File(currentPath, "grouplist.json");
 
@@ -187,7 +190,7 @@ public class Server extends RemoteServer implements ServerInterface {
 	}
 	
 	public String getGroupList(long checksum) throws RemoteException {
-		
+		return null;
 	}
 
 	
