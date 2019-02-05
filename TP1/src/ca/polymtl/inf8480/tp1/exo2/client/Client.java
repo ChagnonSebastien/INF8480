@@ -69,6 +69,8 @@ public class Client {
 		try (Scanner scanner = new Scanner(System.in)) {
 			// Ouverture de session
 			this.login = openSession(scanner);
+			
+			ShellCmds.GET_GROUP_LIST.execute(login, serverStub, null);
 
 			// Envoi de requêtes
 			this.programLoop();
@@ -80,12 +82,15 @@ public class Client {
 
 	private String openSession(Scanner scanner) throws RemoteException {
 		String login;
-		String result;
+		String result = null;
 		boolean isLoggedIn = false;
 
 		do {
 			System.out.println("Veuillez entrer votre nom d'utilisateur:");
 			login = scanner.nextLine();
+			if (login.isEmpty())
+				continue;
+			
 			System.out.println("Veuillez entrer votre mot de passe:");
 			String password = scanner.nextLine();
 
@@ -118,7 +123,7 @@ public class Client {
 			}
 			
 			if (!args.get(0).equals("./client")) {
-				System.out.printf("bash: %s: command not found\n", args.get(0));
+				System.out.printf("bash: %s: commande inexistante\n", args.get(0));
 				continue;
 			}
 			
@@ -131,7 +136,7 @@ public class Client {
 			try {
 				command = ShellCmds.getByName(args.get(1));
 			} catch (IllegalArgumentException e) {
-				System.out.printf("client: cannot execute '%s': Command dos not exist\n", args.get(1));
+				System.out.printf("client: ne peut pas executer '%s': Commande n'existe pas\n", args.get(1));
 				continue;
 			}
 			

@@ -1,22 +1,51 @@
 package ca.polymtl.inf8480.tp1.exo2.client;
 
+import java.io.File;
+import java.io.FileWriter;
+import java.io.IOException;
+import java.io.PrintWriter;
 import java.rmi.RemoteException;
 import java.util.List;
 
+import ca.polymtl.inf8480.tp1.exo2.shared.Hash;
+import ca.polymtl.inf8480.tp1.exo2.shared.JsonUtils;
 import ca.polymtl.inf8480.tp1.exo2.shared.ServerInterface;
 
 public enum ShellCmds {
 	GET_GROUP_LIST ("get-group-list") {
 		@Override
 		public void execute(String login, ServerInterface server, List<String> args) throws RemoteException {
-			server.getGroupList(Long.MAX_VALUE);
-			System.out.println("OK!");
+			File groupListFile = new File(System.getProperty("user.home"), "grouplist.json");
+
+			String checksum = "";
+			if (groupListFile.exists()) {
+				checksum = Hash.MD5.checksum(groupListFile);
+			}
+			
+			String groups = server.getGroupList(checksum);
+			if (groups == null) {
+				System.out.println("Vous avez deja la derniere version de la liste de groupes");
+				return;
+			}
+			
+			if (!groupListFile.exists()) {
+				try {
+					groupListFile.createNewFile();
+				}
+				catch (Exception e) {
+					System.out.println(e.getMessage());
+				}
+			}
+			
+			JsonUtils.writeToFile(groups, groupListFile);
+			System.out.println("La liste des groupes a ete mise a jour");
+			
 		}
 	},
-	COMMAND_2 ("command2") {
+	PUSH_GROUP_LIST ("publish-group-list") {
 		@Override
 		public void execute(String login, ServerInterface server, List<String> args) throws RemoteException {
-			// TODO Auto-generated method stub
+			
 			
 		}
 	};
