@@ -119,7 +119,7 @@ public class Server extends RemoteServer implements ServerInterface {
 			}
 		}
 		
-		// Lire les groupes de diffusion dans le fichier
+		// Lire les groupes de multidiffusion dans le fichier
 		try {
 			FileReader reader = new FileReader(groupListFile);
 			this.groups = new JsonParser().parse(reader).getAsJsonObject();
@@ -163,6 +163,7 @@ public class Server extends RemoteServer implements ServerInterface {
 	/*
 	 * Methode pour s'authentifier et ouvrir une session au niveau serveur de messagerie
 	 */
+	// TODO : un client a la fois peut s'authentifier
 	@Override
 	public String openSession(String login, String password) throws RemoteException {
 		
@@ -269,12 +270,17 @@ public class Server extends RemoteServer implements ServerInterface {
 		if (elem != null) {
 			// Courriel envoye a un groupe
 			JsonArray groupList = elem.getAsJsonArray();
+			
+			if (groupList.size() == 0) {
+				result += "L'adresse de multidiffusion ne contient aucun utilisateur.\n";
+			}
+			
 			for (JsonElement dest : groupList) {
 				if (userExists(dest.getAsString())) {
 					dests.add(dest.getAsString());
 				}
 				else {
-					result += "L'utilisateur " + dest.getAsString() + " dans le groupe de diffusion " + to + " n'existe pas.\n";
+					result += "L'utilisateur " + dest.getAsString() + " dans le groupe de multidiffusion " + to + " n'existe pas.\n";
 				}
 			}
 		}
@@ -316,7 +322,7 @@ public class Server extends RemoteServer implements ServerInterface {
 		}
 		
 		if (dests.size() > 0) {
-			result += "Courriel envoye avec succes a " + (dests.size() > 1 ? ("la liste de diffusion " + to) : to);
+			result += "Courriel envoye avec succes a " + (dests.size() > 1 ? ("la liste de multidiffusion " + to) : to);
 		}
 		else {
 			result += "Courriel non envoye";
