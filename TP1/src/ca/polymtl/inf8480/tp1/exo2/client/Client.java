@@ -80,10 +80,10 @@ public class Client {
 			this.userDir = Paths.get(clientDir, login).toString();
 			new File(userDir).mkdir();
 			
-			ShellCmds.GET_GROUP_LIST.execute(login, serverStub, this.userDir, null);
+			ShellCmds.GET_GROUP_LIST.execute(login, serverStub, this.userDir, null, null);
 			
 			// Envoi de requêtes
-			this.programLoop();
+			this.programLoop(scanner);
 
 		} catch (RemoteException e) {
 			e.printStackTrace();
@@ -118,14 +118,14 @@ public class Client {
 		return result;
 	}
 
-	private void programLoop() {
-		Scanner scanner = new Scanner(System.in);
+	private void programLoop(Scanner scanner) {
 		boolean end = false;
+		
 		do {
 
 			System.out.printf("\n%s$ ", this.login);
 			String request = scanner.nextLine();
-			List<String> args = new ArrayList<String>(Arrays.asList(request.split(" ")));
+			List<String> args = new ArrayList<String>(Arrays.asList(request.split(" ", 3)));
 			args.removeAll(Arrays.asList(""));
 			
 			if (args.size() == 0) {
@@ -151,7 +151,7 @@ public class Client {
 			}
 			
 			try {
-				command.execute(this.login, serverStub, userDir, args);
+				command.execute(this.login, serverStub, userDir, args.size() > 2 ? args.get(2) : null, scanner);
 			} catch (RemoteException e) {
 				e.printStackTrace();
 			}

@@ -10,9 +10,13 @@ import java.rmi.registry.LocateRegistry;
 import java.rmi.registry.Registry;
 import java.rmi.server.RemoteServer;
 import java.rmi.server.UnicastRemoteObject;
+import java.util.ArrayList;
+import java.util.Date;
 import java.util.HashSet;
+import java.util.List;
 
 import com.google.gson.JsonArray;
+import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 
@@ -22,9 +26,6 @@ import ca.polymtl.inf8480.tp1.exo2.shared.ServerInterface;
 
 public class Server extends RemoteServer implements ServerInterface {
 	
-	/**
-	 * 
-	 */
 	private static final long serialVersionUID = 3520052702176224119L;
 
 	public static void main(String[] args) {
@@ -34,6 +35,7 @@ public class Server extends RemoteServer implements ServerInterface {
 
 	private String lockedUser = null;
 	private File groupListFile;
+	private File usersFile;
 	
 	private JsonObject users;
 	private JsonObject groups;
@@ -59,7 +61,7 @@ public class Server extends RemoteServer implements ServerInterface {
 	}
 
 	private void getUsers() {
-		File usersFile = new File(serverDirPath, "users.json");
+		this.usersFile = new File(serverDirPath, "users.json");
 
 		if (!usersFile.exists()) {
 			try {
@@ -70,15 +72,23 @@ public class Server extends RemoteServer implements ServerInterface {
 			
 			// Populer la liste des utilisateurs dans le fichier
 			JsonObject users = new JsonObject();
-			users.addProperty("seb@polymtl.ca", "seb");
-			users.addProperty("pierre@polymtl.ca", "pierre");
 			
-			JsonUtils.writeToFile(users.toString(), usersFile);
+			JsonObject user1 = new JsonObject();
+			user1.addProperty("password", "seb");
+			user1.addProperty("mailCount", 0);
+			users.add("seb@polymtl.ca", user1);
+			
+			JsonObject user2 = new JsonObject();
+			user2.addProperty("password", "pierre");
+			user2.addProperty("mailCount", 0);
+			users.add("pierre@polymtl.ca", user2);
+			
+			JsonUtils.writeToFile(users.toString(), this.usersFile);
 		}
 		
 		// Lire les utilisateurs dans le fichier
 		try {
-			FileReader reader = new FileReader(usersFile);
+			FileReader reader = new FileReader(this.usersFile);
 			this.users = (JsonObject) new JsonParser().parse(reader);
 		} catch (Exception e) {
 			e.printStackTrace();
@@ -117,6 +127,14 @@ public class Server extends RemoteServer implements ServerInterface {
 		
 		return groupListFile;
 	}
+	
+	private boolean userExists(String user) {
+		return this.users.get(user) != null;
+	}
+	
+	private boolean userIsLogged(String user) {
+		return this.loggedUsers.contains(user);
+	}
 
 	private void run() {
 		if (System.getSecurityManager() == null) {
@@ -146,7 +164,7 @@ public class Server extends RemoteServer implements ServerInterface {
 	@Override
 	public String openSession(String login, String password) throws RemoteException {
 		
-		if (this.users.get(login) == null || !this.users.get(login).getAsString().equals(password))
+		if (this.users.get(login) == null || !this.users.get(login).getAsJsonObject().get("password").getAsString().equals(password))
 			return "";
 		
 		loggedUsers.add(login);
@@ -154,18 +172,36 @@ public class Server extends RemoteServer implements ServerInterface {
 	}
 
 	@Override
-	public String getGroupList(String checksum) throws RemoteException {
+	public String getGroupList(String checksum, String login) throws RemoteException {
+		JsonObject response = new JsonObject();
+		
+		// Check if user is logged
+		if (!userIsLogged(login)) {
+			response.addProperty("result", false);
+			response.addProperty("content", "Vous n'etes pas authentifie. Que faites-vous ici?");
+			return response.toString();
+		}
+		
 		String actualChecksum = Hash.MD5.checksum(groupListFile);
 		if (actualChecksum.equals(checksum)) {
-			return null;
+			response.addProperty("result", false);
+			response.addProperty("content", "Vous avez deja la derniere version de la liste de groupes.");
 		} else {
-			return this.groups.toString();
+			response.addProperty("result", true);
+			response.addProperty("content", this.groups.toString());
+			
 		}
+		
+		return response.toString();
 	}
 
 	@Override
 	public String pushGroupList(String groupsDef, String login) throws RemoteException {
-
+		// Check if user is logged
+		if (!userIsLogged(login)) {
+			return "Vous n'etes pas authentifie. Que faites-vous ici?";
+		}
+		
 		if (lockedUser == null)
 			return"Impossible de publier les changements: Vous devez verrouiller la liste de groupes globale";
 		
@@ -181,8 +217,13 @@ public class Server extends RemoteServer implements ServerInterface {
 
 	@Override
 	public String lockGroupList(String login) throws RemoteException {
+		// Check if user is logged
+		if (!userIsLogged(login)) {
+			return "Vous n'etes pas authentifie. Que faites-vous ici?";
+		}
+		
 		if (lockedUser != null)
-			return "La liste de groupe globale est déja verrouilee par " + this.lockedUser;
+			return "La liste de groupe globale est deja verrouilee par " + this.lockedUser;
 		
 		long timeout = 60000;
 		Server server = this;
@@ -204,7 +245,80 @@ public class Server extends RemoteServer implements ServerInterface {
 		return "La liste de groupes globale est verrouillee avec succes. Votre lock expirera dans " + timeout / 1000 + "s";
 	}
 
+	@Override
+	public String sendMail(String email) throws RemoteException {
+		JsonObject emailJson = new JsonParser().parse(email).getAsJsonObject();
+		String from = emailJson.get("from").getAsString();
+		
+		// Check if user is logged
+		if (!userIsLogged(from)) {
+			return "Vous n'etes pas authentifie. Que faites-vous ici?";
+		}
+		
+		String to = emailJson.get("to").getAsString();
+		
+		String result = "";
+		
+		List<String> dests = new ArrayList<String>();
+		
+		JsonElement elem = this.groups.get(to); 
+		if (elem != null) {
+			// Courriel envoye a un groupe
+			JsonArray groupList = elem.getAsJsonArray();
+			for (JsonElement dest : groupList) {
+				if (userExists(dest.getAsString())) {
+					dests.add(dest.getAsString());
+				}
+				else {
+					result += "L'utilisateur " + dest.getAsString() + " dans le groupe de diffusion " + to + " n'existe pas.\n";
+				}
+			}
+		}
+		else {
+			// Courriel envoye a un utilisateur unique
+			if (userExists(to)) {
+				dests.add(to);
+			}
+			else {
+				result += "L'utilisateur " + to + " n'existe pas.\n";
+			}
+		}
+		
+		// Envoi de courriel(s)
+		for (String dest : dests) {
+			String destFolder = Paths.get(this.emailsPath, dest).toString();
+			new File(destFolder).mkdir();
+			
+			String date = new Date().toString();
+			emailJson.addProperty("date", date);
+			
+			emailJson.addProperty("read", false);
+			
+			int mailId = this.users.get(dest).getAsJsonObject().get("mailCount").getAsInt() + 1;
+			emailJson.addProperty("id", mailId);
+			this.users.get(dest).getAsJsonObject().addProperty("mailCount", mailId);
+			
+			// Update users file
+			JsonUtils.writeToFile(this.users.toString(), this.usersFile);
+			
+			// Write email
+			File emailFile = new File(destFolder, mailId + ".json");
+			try {
+				emailFile.createNewFile();
+			} catch (IOException e) {
+				e.printStackTrace();
+			}
+			JsonUtils.writeToFile(emailJson.toString(), emailFile);
+		}
+		
+		if (dests.size() > 0) {
+			result += "Courriel envoye avec succes a " + (dests.size() > 1 ? ("la liste de diffusion " + to) : to);
+		}
+		else {
+			result += "Courriel non envoye";
+		}
+		
+		return result;
+	}
 	
-	
-
 }
