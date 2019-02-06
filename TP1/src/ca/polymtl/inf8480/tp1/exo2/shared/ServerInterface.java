@@ -17,4 +17,6 @@ public interface ServerInterface extends Remote {
 	
 	public String listMails(boolean justUnread, String login) throws RemoteException;
 	
+	public String readMail(int id, String login) throws RemoteException;
+	
 }

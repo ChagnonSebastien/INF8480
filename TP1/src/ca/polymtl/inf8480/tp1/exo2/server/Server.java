@@ -351,7 +351,6 @@ public class Server extends RemoteServer implements ServerInterface {
 			} catch (Exception e) {
 				e.printStackTrace();
 			}
-			
 		}
 		
 		messages.sort(new Comparator<JsonObject>() {
@@ -368,6 +367,48 @@ public class Server extends RemoteServer implements ServerInterface {
 		response.addProperty("result", true);
 		response.addProperty("content", responseContent.toString());
 		response.addProperty("mailCount", listOfFiles.length);
+		return response.toString();
+	}
+	
+	public String readMail(int id, String login) throws RemoteException {
+		JsonObject response = new JsonObject();
+		
+		// Check if user is logged
+		if (!userIsLogged(login)) {
+			response.addProperty("result", false);
+			response.addProperty("content", "Vous n'etes pas authentifie. Que faites-vous ici?");
+			return response.toString();
+		}
+		
+		String destFolderPath = Paths.get(this.emailsPath, login).toString();
+		File destFolder = new File(destFolderPath);
+		destFolder.mkdir();
+		
+		File[] listOfFiles = destFolder.listFiles();
+		JsonObject message = null;
+		
+		for (File messageFile : listOfFiles) {
+			try (FileReader reader = new FileReader(messageFile)) {
+				JsonObject m = new JsonParser().parse(reader).getAsJsonObject();
+				if (m.get("id").getAsInt() == id) {
+					message = m;
+					m.addProperty("read", true);
+					JsonUtils.writeToFile(m.toString(), messageFile);
+					break;
+				}
+			} catch (Exception e) {
+				e.printStackTrace();
+			}
+		}
+		
+		if (message == null) {
+			response.addProperty("result", false);
+			response.addProperty("content", "L'id du courriel n'existe pas.");
+			return response.toString();
+		}
+		
+		response.addProperty("result", true);
+		response.addProperty("content", message.get("content").getAsString());
 		return response.toString();
 	}
 	

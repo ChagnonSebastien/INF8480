@@ -176,6 +176,63 @@ public enum ShellCmds {
 			}
 			
 		}
+	},
+	READ_MAIL ("read") {
+		@Override
+		public void execute(String login, ServerInterface server, String userDir, String args, Scanner scanner) throws RemoteException {
+			boolean justUnread = false;
+			JsonObject response = new JsonParser().parse(server.listMails(justUnread, login)).getAsJsonObject();
+			
+			boolean result = response.get("result").getAsBoolean();
+			String content = response.get("content").getAsString();
+			
+			if (!result) {
+				System.out.println(content);
+				return;
+			}
+			
+			JsonArray messages = new JsonParser().parse(content).getAsJsonArray();
+			int unreadMessages = 0;
+			for (JsonElement messageJson : messages) {
+				JsonObject message = messageJson.getAsJsonObject();
+				
+				boolean read = message.get("read").getAsBoolean();
+				if (!read)
+					unreadMessages++;
+			}
+			System.out.println(response.get("mailCount").getAsInt() + " courriers dont " + unreadMessages + " sont non-lus.");
+			
+			for (JsonElement messageJson : messages) {
+				JsonObject message = messageJson.getAsJsonObject();
+				
+				int id = message.get("id").getAsInt();
+				boolean read = message.get("read").getAsBoolean();
+				String from = message.get("from").getAsString();
+				String date = message.get("date").getAsString();
+				String subject = message.get("subject").getAsString();
+				
+				System.out.println(id + "\t" + (read ? "-" : "N") + "\t" + from + "\t" + date + "\t" + subject);
+			}
+			
+			do {
+				System.out.print("Lire le courriel no : ");
+				try {
+					if (scanner.hasNextLine()) {
+						int id = Integer.parseInt(scanner.nextLine());
+					    response = new JsonParser().parse(server.readMail(id, login)).getAsJsonObject();
+						
+						if (!response.get("result").getAsBoolean()) {
+							System.out.println(response.get("content").getAsString());
+							return;
+						}
+						
+						System.out.println(response.get("content").getAsString());
+						break;
+					}
+				} catch(Exception e) {
+				}
+			} while (true);
+		}
 	};
 	
 	private String commandName;
