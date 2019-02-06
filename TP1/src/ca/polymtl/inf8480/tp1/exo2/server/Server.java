@@ -411,5 +411,33 @@ public class Server extends RemoteServer implements ServerInterface {
 		response.addProperty("content", message.get("content").getAsString());
 		return response.toString();
 	}
+
+	@Override
+	public String deleteMail(int id, String login) throws RemoteException {		
+		// Check if user is logged
+		if (!userIsLogged(login)) {
+			return "Vous n'etes pas authentifie. Que faites-vous ici?";
+		}
+		
+		String destFolderPath = Paths.get(this.emailsPath, login).toString();
+		File destFolder = new File(destFolderPath);
+		destFolder.mkdir();
+		
+		File[] listOfFiles = destFolder.listFiles();
+		for (File messageFile : listOfFiles) {
+			try (FileReader reader = new FileReader(messageFile)) {
+				JsonObject m = new JsonParser().parse(reader).getAsJsonObject();
+				if (m.get("id").getAsInt() == id) {
+					reader.close();
+					messageFile.delete();
+					return "Le courriel avec l'id " + id + " a ete supprime avec succes." ;
+				}
+			} catch (Exception e) {
+				e.printStackTrace();
+			}
+		}
+		
+		return "L'id du courriel n'existe pas.";
+	}
 	
 }

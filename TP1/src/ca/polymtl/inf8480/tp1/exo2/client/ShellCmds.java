@@ -143,83 +143,21 @@ public enum ShellCmds {
 		@Override
 		public void execute(String login, ServerInterface server, String userDir, String args, Scanner scanner) throws RemoteException {
 			boolean justUnread = args != null ? args.contains("-u") : false;
-			JsonObject response = new JsonParser().parse(server.listMails(justUnread, login)).getAsJsonObject();
-			
-			boolean result = response.get("result").getAsBoolean();
-			String content = response.get("content").getAsString();
-			
-			if (!result) {
-				System.out.println(content);
-				return;
-			}
-			
-			JsonArray messages = new JsonParser().parse(content).getAsJsonArray();
-			int unreadMessages = 0;
-			for (JsonElement messageJson : messages) {
-				JsonObject message = messageJson.getAsJsonObject();
-				
-				boolean read = message.get("read").getAsBoolean();
-				if (!read)
-					unreadMessages++;
-			}
-			System.out.println(response.get("mailCount").getAsInt() + " courriers dont " + unreadMessages + " sont non-lus.");
-			
-			for (JsonElement messageJson : messages) {
-				JsonObject message = messageJson.getAsJsonObject();
-				
-				boolean read = message.get("read").getAsBoolean();
-				String from = message.get("from").getAsString();
-				String date = message.get("date").getAsString();
-				String subject = message.get("subject").getAsString();
-				
-				System.out.println((read ? "-" : "N") + "\t" + from + "\t" + date + "\t" + subject);
-			}
-			
+			listMails(login, server, justUnread);
 		}
 	},
 	READ_MAIL ("read") {
 		@Override
 		public void execute(String login, ServerInterface server, String userDir, String args, Scanner scanner) throws RemoteException {
 			boolean justUnread = false;
-			JsonObject response = new JsonParser().parse(server.listMails(justUnread, login)).getAsJsonObject();
-			
-			boolean result = response.get("result").getAsBoolean();
-			String content = response.get("content").getAsString();
-			
-			if (!result) {
-				System.out.println(content);
-				return;
-			}
-			
-			JsonArray messages = new JsonParser().parse(content).getAsJsonArray();
-			int unreadMessages = 0;
-			for (JsonElement messageJson : messages) {
-				JsonObject message = messageJson.getAsJsonObject();
-				
-				boolean read = message.get("read").getAsBoolean();
-				if (!read)
-					unreadMessages++;
-			}
-			System.out.println(response.get("mailCount").getAsInt() + " courriers dont " + unreadMessages + " sont non-lus.");
-			
-			for (JsonElement messageJson : messages) {
-				JsonObject message = messageJson.getAsJsonObject();
-				
-				int id = message.get("id").getAsInt();
-				boolean read = message.get("read").getAsBoolean();
-				String from = message.get("from").getAsString();
-				String date = message.get("date").getAsString();
-				String subject = message.get("subject").getAsString();
-				
-				System.out.println(id + "\t" + (read ? "-" : "N") + "\t" + from + "\t" + date + "\t" + subject);
-			}
+			listMails(login, server, justUnread);
 			
 			do {
 				System.out.print("Lire le courriel no : ");
 				try {
 					if (scanner.hasNextLine()) {
 						int id = Integer.parseInt(scanner.nextLine());
-					    response = new JsonParser().parse(server.readMail(id, login)).getAsJsonObject();
+					    JsonObject response = new JsonParser().parse(server.readMail(id, login)).getAsJsonObject();
 						
 						if (!response.get("result").getAsBoolean()) {
 							System.out.println(response.get("content").getAsString());
@@ -228,6 +166,25 @@ public enum ShellCmds {
 						
 						System.out.println(response.get("content").getAsString());
 						break;
+					}
+				} catch(Exception e) {
+				}
+			} while (true);
+		}
+	},
+	DELETE_MAIL ("delete") {
+		@Override
+		public void execute(String login, ServerInterface server, String userDir, String args, Scanner scanner) throws RemoteException {
+			boolean justUnread = false;
+			listMails(login, server, justUnread);
+			
+			do {
+				System.out.print("Supprimer le courriel no : ");
+				try {
+					if (scanner.hasNextLine()) {
+						int id = Integer.parseInt(scanner.nextLine());
+						System.out.println(server.deleteMail(id, login));
+						return;
 					}
 				} catch(Exception e) {
 				}
@@ -251,6 +208,41 @@ public enum ShellCmds {
 		}
 		
 		throw new IllegalArgumentException(cmd + " is not a valid command");
+	}
+	
+	private static void listMails(String login, ServerInterface server, boolean justUnread) throws RemoteException {
+		JsonObject response = new JsonParser().parse(server.listMails(justUnread, login)).getAsJsonObject();
+		
+		boolean result = response.get("result").getAsBoolean();
+		String content = response.get("content").getAsString();
+		
+		if (!result) {
+			System.out.println(content);
+			return;
+		}
+		
+		JsonArray messages = new JsonParser().parse(content).getAsJsonArray();
+		int unreadMessages = 0;
+		for (JsonElement messageJson : messages) {
+			JsonObject message = messageJson.getAsJsonObject();
+			
+			boolean read = message.get("read").getAsBoolean();
+			if (!read)
+				unreadMessages++;
+		}
+		System.out.println(response.get("mailCount").getAsInt() + " courriers dont " + unreadMessages + " sont non-lus.");
+		
+		for (JsonElement messageJson : messages) {
+			JsonObject message = messageJson.getAsJsonObject();
+			
+			int id = message.get("id").getAsInt();
+			boolean read = message.get("read").getAsBoolean();
+			String from = message.get("from").getAsString();
+			String date = message.get("date").getAsString();
+			String subject = message.get("subject").getAsString();
+			
+			System.out.println(id + "\t" + (read ? "-" : "N") + "\t" + from + "\t" + date + "\t" + subject);
+		}
 	}
 
 }
