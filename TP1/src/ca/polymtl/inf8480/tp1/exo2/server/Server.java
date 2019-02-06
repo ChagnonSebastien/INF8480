@@ -2,9 +2,7 @@ package ca.polymtl.inf8480.tp1.exo2.server;
 
 import java.io.File;
 import java.io.FileReader;
-import java.io.FileWriter;
 import java.io.IOException;
-import java.io.PrintWriter;
 import java.nio.file.Paths;
 import java.rmi.ConnectException;
 import java.rmi.RemoteException;
@@ -33,7 +31,8 @@ public class Server extends RemoteServer implements ServerInterface {
 		Server server = new Server();
 		server.run();
 	}
-	
+
+	private String lockedUser = null;
 	private File groupListFile;
 	
 	private JsonObject users;
@@ -41,25 +40,26 @@ public class Server extends RemoteServer implements ServerInterface {
 	
 	private HashSet<String> loggedUsers;
 	
-	final String emailRoot = "1734636-1804702-email";
-	String currentPath = System.getProperty("user.dir");
-	final String basePath = Paths.get(currentPath, emailRoot).toString();
+	String serverDirPath = Paths.get(System.getProperty("user.dir"), "1734636-1804702-server").toString();
+	final String emailsPath = Paths.get(serverDirPath, "emails").toString();
 
 	public Server() {
 		super();
-		this.getUsers();
-		this.groupListFile = this.getGroupList();
-		loggedUsers = new HashSet<String>();
 		
 		try {
-			this.makeDirectory(emailRoot);
+			new File(serverDirPath).mkdir();
+			new File(emailsPath).mkdir();
 		} catch (Exception e) {
 			System.out.println(e.getMessage());
 		}
+		
+		this.getUsers();
+		this.groupListFile = this.getGroupList();
+		loggedUsers = new HashSet<String>();
 	}
 
 	private void getUsers() {
-		File usersFile = new File(currentPath, "users.json");
+		File usersFile = new File(serverDirPath, "users.json");
 
 		if (!usersFile.exists()) {
 			try {
@@ -86,7 +86,7 @@ public class Server extends RemoteServer implements ServerInterface {
 	}
 	
 	private File getGroupList() {
-		File groupListFile = new File(currentPath, "grouplist.json");
+		File groupListFile = new File(serverDirPath, "grouplist.json");
 
 		if (!groupListFile.exists()) {
 			try {
@@ -116,12 +116,6 @@ public class Server extends RemoteServer implements ServerInterface {
 		}
 		
 		return groupListFile;
-	}
-	
-	// CrÃ©e un dossier
-	private void makeDirectory(String directoryName) throws Exception {
-		File directory = new File(Paths.get(currentPath, directoryName).toString());
-		directory.mkdir();
 	}
 
 	private void run() {
@@ -170,12 +164,44 @@ public class Server extends RemoteServer implements ServerInterface {
 	}
 
 	@Override
-	public String pushGroupList(String groupsDef) throws RemoteException {
+	public String pushGroupList(String groupsDef, String login) throws RemoteException {
 
+		if (lockedUser == null)
+			return"Impossible de publier les changements: Vous devez verrouiller la liste de groupes globale";
+		
+		if (!lockedUser.equals(login)) 
+			return "Impossible de publier les changements: La liste de groupes globale est deja verrouillee par " + this.lockedUser;
+		
 		JsonUtils.writeToFile(groupsDef, this.groupListFile);
 		this.groups = new JsonParser().parse(groupsDef).getAsJsonObject();
 		
-		return null;
+		this.lockedUser = null;
+		return "Les modifications apportees a la liste de groupes globale sont publiees avec succes";
+	}
+
+	@Override
+	public String lockGroupList(String login) throws RemoteException {
+		if (lockedUser != null)
+			return "La liste de groupe globale est déja verrouilee par " + this.lockedUser;
+		
+		long timeout = 60000;
+		Server server = this;
+		new Thread(new Runnable() {
+			
+			@Override
+			public void run() {
+				try {
+					Thread.sleep(timeout);
+				} catch (InterruptedException e) {
+					e.printStackTrace();
+				} finally {
+					server.lockedUser = null;
+				}
+			}
+		}).start();
+		
+		this.lockedUser = login;
+		return "La liste de groupes globale est verrouillee avec succes. Votre lock expirera dans " + timeout / 1000 + "s";
 	}
 
 	

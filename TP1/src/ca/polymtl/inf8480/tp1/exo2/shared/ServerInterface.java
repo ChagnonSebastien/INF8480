@@ -9,6 +9,8 @@ public interface ServerInterface extends Remote {
 	
 	public String getGroupList(String checksum) throws RemoteException;
 
-	public String pushGroupList(String groupsDef) throws RemoteException;
+	public String pushGroupList(String groupsDef, String login) throws RemoteException;
+
+	public String lockGroupList(String login) throws RemoteException;
 	
 }

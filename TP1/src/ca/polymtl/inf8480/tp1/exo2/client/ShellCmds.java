@@ -1,11 +1,13 @@
 package ca.polymtl.inf8480.tp1.exo2.client;
 
 import java.io.File;
-import java.io.FileWriter;
-import java.io.IOException;
-import java.io.PrintWriter;
+import java.io.FileNotFoundException;
+import java.io.FileReader;
 import java.rmi.RemoteException;
 import java.util.List;
+
+import com.google.gson.JsonObject;
+import com.google.gson.JsonParser;
 
 import ca.polymtl.inf8480.tp1.exo2.shared.Hash;
 import ca.polymtl.inf8480.tp1.exo2.shared.JsonUtils;
@@ -14,8 +16,8 @@ import ca.polymtl.inf8480.tp1.exo2.shared.ServerInterface;
 public enum ShellCmds {
 	GET_GROUP_LIST ("get-group-list") {
 		@Override
-		public void execute(String login, ServerInterface server, List<String> args) throws RemoteException {
-			File groupListFile = new File(System.getProperty("user.home"), "grouplist.json");
+		public void execute(String login, ServerInterface server, String userDir, List<String> args) throws RemoteException {
+			File groupListFile = new File(userDir, "grouplist.json");
 
 			String checksum = "";
 			if (groupListFile.exists()) {
@@ -44,9 +46,31 @@ public enum ShellCmds {
 	},
 	PUSH_GROUP_LIST ("publish-group-list") {
 		@Override
-		public void execute(String login, ServerInterface server, List<String> args) throws RemoteException {
+		public void execute(String login, ServerInterface server, String userDir, List<String> args) throws RemoteException {
+			File groupListFile = new File(userDir, "grouplist.json");
+
+			if (!groupListFile.exists())
+				try {
+					throw new Exception("grouplist.json n'existe pas");
+				} catch (java.lang.Exception e) {
+					e.printStackTrace();
+				}
 			
-			
+			FileReader reader;
+			try {
+				reader = new FileReader(groupListFile);
+				JsonObject groups = new JsonParser().parse(reader).getAsJsonObject();
+				System.out.println(server.pushGroupList(groups.toString(), login));
+				
+			} catch (FileNotFoundException e) {
+				e.printStackTrace();
+			}
+		}
+	},
+	LOCK_GROUP_LIST ("lock-group-list") {
+		@Override
+		public void execute(String login, ServerInterface server, String userDir, List<String> args) throws RemoteException {
+			System.out.println(server.lockGroupList(login));
 		}
 	};
 	
@@ -57,7 +81,7 @@ public enum ShellCmds {
 		
 	}
 	
-	public abstract void execute(String login, ServerInterface server, List<String> args) throws RemoteException;
+	public abstract void execute(String login, ServerInterface server, String userDir, List<String> args) throws RemoteException;
 	
 	public static ShellCmds getByName(String cmd) throws IllegalArgumentException {
 		for (ShellCmds c : ShellCmds.values()) {

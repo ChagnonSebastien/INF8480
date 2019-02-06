@@ -1,5 +1,7 @@
 package ca.polymtl.inf8480.tp1.exo2.client;
 
+import java.io.File;
+import java.nio.file.Paths;
 import java.rmi.AccessException;
 import java.rmi.NotBoundException;
 import java.rmi.RemoteException;
@@ -27,6 +29,8 @@ public class Client {
 
 	private ServerInterface serverStub = null;
 	private String login;
+	private String clientDir;
+	private String userDir;
 
 	public Client(String distantServerHostname) {
 		super();
@@ -34,12 +38,15 @@ public class Client {
 		if (System.getSecurityManager() == null) {
 			System.setSecurityManager(new SecurityManager());
 		}
-
+		
 		if (distantServerHostname != null) {
 			serverStub = loadServerStub(distantServerHostname);
 		} else {
 			serverStub = loadServerStub("127.0.0.1");
 		}
+		
+		clientDir = Paths.get(System.getProperty("user.dir"), "1734636-1804702-client").toString();
+		new File(clientDir).mkdir();
 	}
 
 	private void run() {
@@ -70,8 +77,11 @@ public class Client {
 			// Ouverture de session
 			this.login = openSession(scanner);
 			
-			ShellCmds.GET_GROUP_LIST.execute(login, serverStub, null);
-
+			this.userDir = Paths.get(clientDir, login).toString();
+			new File(userDir).mkdir();
+			
+			ShellCmds.GET_GROUP_LIST.execute(login, serverStub, this.userDir, null);
+			
 			// Envoi de requêtes
 			this.programLoop();
 
@@ -141,7 +151,7 @@ public class Client {
 			}
 			
 			try {
-				command.execute(this.login, serverStub, args);
+				command.execute(this.login, serverStub, userDir, args);
 			} catch (RemoteException e) {
 				e.printStackTrace();
 			}
