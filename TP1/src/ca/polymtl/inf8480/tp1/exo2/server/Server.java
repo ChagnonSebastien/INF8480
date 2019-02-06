@@ -439,5 +439,63 @@ public class Server extends RemoteServer implements ServerInterface {
 		
 		return "L'id du courriel n'existe pas.";
 	}
+
+	@Override
+	public String findMail(String args, String login) throws RemoteException {		
+		JsonObject response = new JsonObject();
+		
+		// Check if user is logged
+		if (!userIsLogged(login)) {
+			response.addProperty("result", false);
+			response.addProperty("content", "Vous n'etes pas authentifie. Que faites-vous ici?");
+			return response.toString();
+		}
+		
+		String destFolderPath = Paths.get(this.emailsPath, login).toString();
+		File destFolder = new File(destFolderPath);
+		destFolder.mkdir();
+		
+		File[] listOfFiles = destFolder.listFiles();
+		List<JsonObject> messages = new ArrayList<>();
+		
+		for (File messageFile : listOfFiles) {
+			try (FileReader reader = new FileReader(messageFile)) {
+				JsonObject m = new JsonParser().parse(reader).getAsJsonObject();
+				if (containsWords(m.get("content").getAsString(), args.split(" "))) {
+					messages.add(m);
+				}
+			} catch (Exception e) {
+				e.printStackTrace();
+			}
+		}
+		
+		messages.sort(new Comparator<JsonObject>() {
+			@Override
+			public int compare(JsonObject o1, JsonObject o2) {
+				return o1.get("id").getAsInt() - o2.get("id").getAsInt();
+			}
+		});
+		
+		JsonArray responseContent = new JsonArray();
+		for (JsonObject message : messages)
+			responseContent.add(message);
+
+		response.addProperty("result", true);
+		response.addProperty("content", responseContent.toString());
+		response.addProperty("mailCount", messages.size());
+		return response.toString();
+	}
+	
+	private static boolean containsWords(String message, String[] words) {
+		int wordsFound = 0;
+		
+		for (String word : words) {
+			if (message.contains(word)) {
+				wordsFound++;
+			}
+		}
+		
+		return wordsFound == words.length;
+	}
 	
 }

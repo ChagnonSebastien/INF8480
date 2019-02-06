@@ -190,6 +190,62 @@ public enum ShellCmds {
 				}
 			} while (true);
 		}
+	},
+	SEARCH_MAIL ("search") {
+		@Override
+		public void execute(String login, ServerInterface server, String userDir, String args, Scanner scanner) throws RemoteException {
+			if (args == null) {
+				System.out.println("Veuillez ajouter au moins un mots-cle a votre recherche.");
+				return;
+			}
+			
+			JsonObject response = new JsonParser().parse(server.findMail(args, login)).getAsJsonObject();
+			
+			boolean result = response.get("result").getAsBoolean();
+			String content = response.get("content").getAsString();
+			
+			if (!result) {
+				System.out.println(content);
+				return;
+			}
+			
+			JsonArray messages = new JsonParser().parse(content).getAsJsonArray();
+			
+			int mailCount = response.get("mailCount").getAsInt();
+			System.out.println(mailCount + " courriels qui correspondent a votre recherche sont trouves.");
+			
+			for (JsonElement messageJson : messages) {
+				JsonObject message = messageJson.getAsJsonObject();
+				
+				int id = message.get("id").getAsInt();
+				String from = message.get("from").getAsString();
+				String date = message.get("date").getAsString();
+				String subject = message.get("subject").getAsString();
+				
+				System.out.println(id + "\t" + from + "\t" + date + "\t" + subject);
+			}
+			
+			if (mailCount > 0) {
+				do {
+					System.out.print("Lire le courriel no : ");
+					try {
+						if (scanner.hasNextLine()) {
+							int id = Integer.parseInt(scanner.nextLine());
+						    response = new JsonParser().parse(server.readMail(id, login)).getAsJsonObject();
+							
+							if (!response.get("result").getAsBoolean()) {
+								System.out.println(response.get("content").getAsString());
+								return;
+							}
+							
+							System.out.println(response.get("content").getAsString());
+							break;
+						}
+					} catch(Exception e) {
+					}
+				} while (true);
+			}
+		}
 	};
 	
 	private String commandName;
@@ -230,7 +286,7 @@ public enum ShellCmds {
 			if (!read)
 				unreadMessages++;
 		}
-		System.out.println(response.get("mailCount").getAsInt() + " courriers dont " + unreadMessages + " sont non-lus.");
+		System.out.println(response.get("mailCount").getAsInt() + " courriels dont " + unreadMessages + " sont non-lus.");
 		
 		for (JsonElement messageJson : messages) {
 			JsonObject message = messageJson.getAsJsonObject();

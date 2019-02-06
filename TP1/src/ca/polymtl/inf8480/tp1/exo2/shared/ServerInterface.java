@@ -20,5 +20,7 @@ public interface ServerInterface extends Remote {
 	public String readMail(int id, String login) throws RemoteException;
 	
 	public String deleteMail(int id, String login) throws RemoteException;
+
+	public String findMail(String args, String login) throws RemoteException;
 	
 }
