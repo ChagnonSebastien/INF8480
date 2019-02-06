@@ -163,17 +163,34 @@ public class Server extends RemoteServer implements ServerInterface {
 	/*
 	 * Methode pour s'authentifier et ouvrir une session au niveau serveur de messagerie
 	 */
-	// TODO : un client a la fois peut s'authentifier
 	@Override
 	public String openSession(String login, String password) throws RemoteException {
+		JsonObject response = new JsonObject();
 		
-		if (this.users.get(login) == null ||
-				!this.users.get(login).getAsJsonObject().get("password").getAsString().equals(password) ||
-				this.loggedUsers.contains(login))
-			return "";
+		// Check if user is already logged
+		if (userIsLogged(login)) {
+			response.addProperty("result", false);
+			response.addProperty("content", "Vous etes deja authentifie sur une autre session.");
+			return response.toString();
+		}
+		
+		if (this.users.get(login) == null) {
+			response.addProperty("result", false);
+			response.addProperty("content", "L'adresse courriel n'existe pas.");
+			return response.toString();
+		}
+		
+		if (!this.users.get(login).getAsJsonObject().get("password").getAsString().equals(password)) {
+			response.addProperty("result", false);
+			response.addProperty("content", "Le mot de passe n'est pas entre correctement.");
+			return response.toString();
+		}
 		
 		loggedUsers.add(login);
-		return login;
+		response.addProperty("result", true);
+		response.addProperty("content", "Bienvenue dans votre boite a courriel " + login + ".");
+		response.addProperty("login", login);
+		return response.toString();
 	}
 
 	@Override
@@ -502,6 +519,17 @@ public class Server extends RemoteServer implements ServerInterface {
 		}
 		
 		return wordsFound == words.length;
+	}
+
+	@Override
+	public String disconnectSession(String login) throws RemoteException {
+		// Check if user is logged
+		if (!userIsLogged(login)) {
+			return "Vous n'etes pas authentifie. Que faites-vous ici?";
+		}
+		
+		this.loggedUsers.remove(login);
+		return "Vous avez ete deconnecte avec succes.";
 	}
 	
 }

@@ -12,6 +12,9 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Scanner;
 
+import com.google.gson.JsonObject;
+import com.google.gson.JsonParser;
+
 import ca.polymtl.inf8480.tp1.exo2.shared.ServerInterface;
 
 public class Client {
@@ -19,18 +22,34 @@ public class Client {
 		String distantHostname = null;
 
 		if (args.length > 0) {
-			// TODO remettre
-			// distantHostname = args[0];
+			distantHostname = args[0];
 		}
 
 		Client client = new Client(distantHostname);
+		
+		// Prévention de la fermeture non desiree du client
+		Runtime.getRuntime().addShutdownHook(
+				new Thread() {
+					@Override
+					public void run() {
+						if (client.serverStub != null && client.login != null) {
+							try {
+								client.serverStub.disconnectSession(client.login);
+							} catch (RemoteException e) {
+								e.printStackTrace();
+							}
+						}
+					}
+				}
+		);
+		
 		client.run();
 	}
 
 	private ServerInterface serverStub = null;
-	private String login;
-	private String clientDir;
-	private String userDir;
+	private String login = null;
+	private String clientDir = null;
+	private String userDir = null;
 
 	public Client(String distantServerHostname) {
 		super();
@@ -74,17 +93,18 @@ public class Client {
 
 	private void appelRMI() {
 		try (Scanner scanner = new Scanner(System.in)) {
-			// Ouverture de session
-			this.login = openSession(scanner);
-			
-			this.userDir = Paths.get(clientDir, login).toString();
-			new File(userDir).mkdir();
-			
-			ShellCmds.GET_GROUP_LIST.execute(login, serverStub, this.userDir, null, null);
-			
-			// Envoi de requêtes
-			this.programLoop(scanner);
-
+			do {
+				// Ouverture de session
+				this.login = openSession(scanner);
+				
+				this.userDir = Paths.get(clientDir, login).toString();
+				new File(userDir).mkdir();
+				
+				ShellCmds.GET_GROUP_LIST.execute(login, serverStub, this.userDir, null, null);
+				
+				// Envoi de requêtes
+				this.programLoop(scanner);
+			} while(true);
 		} catch (RemoteException e) {
 			e.printStackTrace();
 		}
@@ -92,7 +112,7 @@ public class Client {
 
 	private String openSession(Scanner scanner) throws RemoteException {
 		String login;
-		String result = null;
+		JsonObject result = null;
 		boolean isLoggedIn = false;
 
 		do {
@@ -104,18 +124,12 @@ public class Client {
 			System.out.println("Veuillez entrer votre mot de passe:");
 			String password = scanner.nextLine();
 
-			result = serverStub.openSession(login, password);
-			isLoggedIn = result.equals(login);
-
-			if (isLoggedIn) {
-				System.out.println("Bienvenue dans votre boite a courriel " + login);
-			} else {
-				System.out.println("Erreur lors de la connection");
-			}
-
+			result = new JsonParser().parse(serverStub.openSession(login, password)).getAsJsonObject();
+			isLoggedIn = result.get("result").getAsBoolean();
+			System.out.println(result.get("content").getAsString());
 		} while (!isLoggedIn);
 
-		return result;
+		return result.get("login").getAsString();
 	}
 
 	private void programLoop(Scanner scanner) {
@@ -142,6 +156,16 @@ public class Client {
 				continue;
 			}
 			
+			if (args.get(1).equals("disconnect")) {
+				try {
+					System.out.println(serverStub.disconnectSession(login));
+				} catch (RemoteException e) {
+					e.printStackTrace();
+				}
+				this.login = null;
+				break;
+			}
+			
 			ShellCmds command;
 			try {
 				command = ShellCmds.getByName(args.get(1));
@@ -158,8 +182,6 @@ public class Client {
 			
 
 		} while (!end);
-		
-		scanner.close();
 	}
 
 }

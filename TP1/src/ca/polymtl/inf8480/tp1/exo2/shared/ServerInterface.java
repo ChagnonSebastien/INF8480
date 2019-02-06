@@ -23,4 +23,6 @@ public interface ServerInterface extends Remote {
 
 	public String findMail(String args, String login) throws RemoteException;
 	
+	public String disconnectSession(String login) throws RemoteException;
+	
 }
