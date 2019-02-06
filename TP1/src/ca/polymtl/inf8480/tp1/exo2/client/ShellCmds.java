@@ -8,6 +8,8 @@ import java.util.Scanner;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import com.google.gson.JsonArray;
+import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 
@@ -22,9 +24,8 @@ public enum ShellCmds {
 			File groupListFile = new File(userDir, "grouplist.json");
 
 			String checksum = "";
-			if (groupListFile.exists()) {
+			if (groupListFile.exists())
 				checksum = Hash.MD5.checksum(groupListFile);
-			}
 			
 			JsonObject response = new JsonParser().parse(server.getGroupList(checksum, login)).getAsJsonObject();
 			boolean result = response.get("result").getAsBoolean();
@@ -136,6 +137,44 @@ public enum ShellCmds {
 			email.addProperty("subject", subject);
 			email.addProperty("content", content);
 			System.out.println(server.sendMail(email.toString()));
+		}
+	},
+	LIST_MAIL ("list") {
+		@Override
+		public void execute(String login, ServerInterface server, String userDir, String args, Scanner scanner) throws RemoteException {
+			boolean justUnread = args != null ? args.contains("-u") : false;
+			JsonObject response = new JsonParser().parse(server.listMails(justUnread, login)).getAsJsonObject();
+			
+			boolean result = response.get("result").getAsBoolean();
+			String content = response.get("content").getAsString();
+			
+			if (!result) {
+				System.out.println(content);
+				return;
+			}
+			
+			JsonArray messages = new JsonParser().parse(content).getAsJsonArray();
+			int unreadMessages = 0;
+			for (JsonElement messageJson : messages) {
+				JsonObject message = messageJson.getAsJsonObject();
+				
+				boolean read = message.get("read").getAsBoolean();
+				if (!read)
+					unreadMessages++;
+			}
+			System.out.println(response.get("mailCount").getAsInt() + " courriers dont " + unreadMessages + " sont non-lus.");
+			
+			for (JsonElement messageJson : messages) {
+				JsonObject message = messageJson.getAsJsonObject();
+				
+				boolean read = message.get("read").getAsBoolean();
+				String from = message.get("from").getAsString();
+				String date = message.get("date").getAsString();
+				String subject = message.get("subject").getAsString();
+				
+				System.out.println((read ? "-" : "N") + "\t" + from + "\t" + date + "\t" + subject);
+			}
+			
 		}
 	};
 	

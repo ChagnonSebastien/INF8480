@@ -10,7 +10,9 @@ import java.rmi.registry.LocateRegistry;
 import java.rmi.registry.Registry;
 import java.rmi.server.RemoteServer;
 import java.rmi.server.UnicastRemoteObject;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.Date;
 import java.util.HashSet;
 import java.util.List;
@@ -164,7 +166,9 @@ public class Server extends RemoteServer implements ServerInterface {
 	@Override
 	public String openSession(String login, String password) throws RemoteException {
 		
-		if (this.users.get(login) == null || !this.users.get(login).getAsJsonObject().get("password").getAsString().equals(password))
+		if (this.users.get(login) == null ||
+				!this.users.get(login).getAsJsonObject().get("password").getAsString().equals(password) ||
+				this.loggedUsers.contains(login))
 			return "";
 		
 		loggedUsers.add(login);
@@ -289,8 +293,8 @@ public class Server extends RemoteServer implements ServerInterface {
 			String destFolder = Paths.get(this.emailsPath, dest).toString();
 			new File(destFolder).mkdir();
 			
-			String date = new Date().toString();
-			emailJson.addProperty("date", date);
+			SimpleDateFormat format = new SimpleDateFormat("EEE MMM dd HH:mm");
+			emailJson.addProperty("date", format.format(new Date()));
 			
 			emailJson.addProperty("read", false);
 			
@@ -319,6 +323,52 @@ public class Server extends RemoteServer implements ServerInterface {
 		}
 		
 		return result;
+	}
+	
+	@Override
+	public String listMails(boolean justUnread, String login) throws RemoteException {
+		JsonObject response = new JsonObject();
+		
+		// Check if user is logged
+		if (!userIsLogged(login)) {
+			response.addProperty("result", false);
+			response.addProperty("content", "Vous n'etes pas authentifie. Que faites-vous ici?");
+			return response.toString();
+		}
+		
+		String destFolderPath = Paths.get(this.emailsPath, login).toString();
+		File destFolder = new File(destFolderPath);
+		destFolder.mkdir();
+		
+		File[] listOfFiles = destFolder.listFiles();
+		List<JsonObject> messages = new ArrayList<>();
+		
+		for (File messageFile : listOfFiles) {
+			try (FileReader reader = new FileReader(messageFile)) {
+				JsonObject message = new JsonParser().parse(reader).getAsJsonObject();
+				if (justUnread ? !message.get("read").getAsBoolean() : true)
+					messages.add(message);
+			} catch (Exception e) {
+				e.printStackTrace();
+			}
+			
+		}
+		
+		messages.sort(new Comparator<JsonObject>() {
+			@Override
+			public int compare(JsonObject o1, JsonObject o2) {
+				return o1.get("id").getAsInt() - o2.get("id").getAsInt();
+			}
+		});
+		
+		JsonArray responseContent = new JsonArray();
+		for (JsonObject message : messages)
+			responseContent.add(message);
+
+		response.addProperty("result", true);
+		response.addProperty("content", responseContent.toString());
+		response.addProperty("mailCount", listOfFiles.length);
+		return response.toString();
 	}
 	
 }
