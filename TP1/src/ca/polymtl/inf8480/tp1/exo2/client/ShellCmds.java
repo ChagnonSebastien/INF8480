@@ -118,6 +118,74 @@ public enum ShellCmds {
 			}
 		}
 	},
+	JOIN_GROUP ("join-group") {
+		@Override
+		public void execute(String login, ServerInterface server, String userDir, String args, Scanner scanner) throws RemoteException {
+			if (args == null) {
+				System.out.println("Votre requete doit contenir l'adresse de multidiffusion et l'adresse de l'utilisateur a ajouter.");
+				return;
+			}
+			
+			// Obtention de l'utilisateur a ajouter
+			String newAddr = "";
+			String newAddrRegex = "-u \\w+@[a-zA-Z_]+?\\.[a-zA-Z]{2,3}";
+			Pattern regex = Pattern.compile(newAddrRegex);
+			Matcher m = regex.matcher(args);
+			if (m.find()) {
+				newAddr = m.group().substring(3);
+			} else {
+				System.out.println("Votre requete doit contenir l'adresse de l'utilisateur a ajouter avec la syntaxe suivante : -u abc@xyz.com");
+				return;
+			}
+			
+			// Obtention de l'adresse de multidiffusion
+			String groupAddr = "";
+			String tempArgs = String.join(" ", args.split(newAddr));
+			String emailRegex = "\\w+@[a-zA-Z_]+?\\.[a-zA-Z]{2,3}";
+			regex = Pattern.compile(emailRegex);
+			m = regex.matcher(tempArgs);
+			if (m.find()) {
+				groupAddr = m.group();
+			} else {
+				System.out.println("Votre requete doit contenir l'adresse de multidiffusion (ex. abc@xyz.com).");
+				return;
+			}
+			
+			File groupListFile = new File(userDir, "grouplist.json");
+
+			if (!groupListFile.exists()) {
+				System.out.println("Veuillez obtenir la groupe de multidiffusion avec \"./client get-group-list\".");
+				return;
+			}
+			
+			FileReader reader;
+			try {
+				reader = new FileReader(groupListFile);
+				JsonObject groups = new JsonParser().parse(reader).getAsJsonObject();
+				
+				if (groups.get(groupAddr) == null) {
+					System.out.println("Ce groupe de multidiffusion n'existe pas.");
+					return;
+				}
+				
+				JsonArray users = groups.get(groupAddr).getAsJsonArray();
+				JsonElement userElem = new JsonParser().parse(newAddr);
+				
+				if (!users.contains(userElem)) {
+					users.add(newAddr);
+				}
+				else {
+					System.out.println("L'utilisateur " + newAddr + " fait deja partie du groupe " + groupAddr + ".");
+					return;
+				}
+				
+				JsonUtils.writeToFile(groups.toString(), groupListFile);
+				System.out.println("L'utilisateur " + newAddr + " a ete ajoute au groupe " + groupAddr + ".");
+			} catch (FileNotFoundException e) {
+				e.printStackTrace();
+			}
+		}
+	},
 	SEND_MAIL ("send") {
 		@Override
 		public void execute(String login, ServerInterface server, String userDir, String args, Scanner scanner) throws RemoteException {
