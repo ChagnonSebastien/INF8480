@@ -1,3 +1,8 @@
+/*
+ * @authors : Sébastien Chagnon (1804702), Pierre To (1734636)
+ * TP1 - INF8480
+ */
+
 package ca.polymtl.inf8480.tp1.exo2.server;
 
 import java.io.File;
@@ -35,6 +40,7 @@ public class Server extends RemoteServer implements ServerInterface {
 		server.run();
 	}
 
+	// Attributs
 	private String lockedUser = null;
 	private File groupListFile;
 	private File usersFile;
@@ -61,7 +67,29 @@ public class Server extends RemoteServer implements ServerInterface {
 		this.groupListFile = this.getGroupList();
 		loggedUsers = new HashSet<String>();
 	}
+	
+	private void run() {
+		if (System.getSecurityManager() == null) {
+			System.setSecurityManager(new SecurityManager());
+		}
 
+		try {
+			ServerInterface stub = (ServerInterface) UnicastRemoteObject.exportObject(this, 0);
+			Registry registry = LocateRegistry.getRegistry();
+			registry.rebind("server", stub);
+			System.out.println("Server ready.");
+		} catch (ConnectException e) {
+			System.err.println("Impossible de se connecter au registre RMI. Est-ce que rmiregistry est lancé ?");
+			System.err.println();
+			System.err.println("Erreur: " + e.getMessage());
+		} catch (Exception e) {
+			System.err.println("Erreur: " + e.getMessage());
+		}
+	}
+
+	/*
+	 * Obtient les utilisateurs ou en crée par defaut
+	 */
 	private void getUsers() {
 		this.usersFile = new File(serverDirPath, "users.json");
 
@@ -97,6 +125,9 @@ public class Server extends RemoteServer implements ServerInterface {
 		}
 	}
 	
+	/*
+	 * Obtient la liste de groupes globale ou en cree une par defaut
+	 */
 	private File getGroupList() {
 		File groupListFile = new File(serverDirPath, "grouplist.json");
 
@@ -130,34 +161,33 @@ public class Server extends RemoteServer implements ServerInterface {
 		return groupListFile;
 	}
 	
+	/*
+	 * Retourne si un utilisateur existe
+	 */
 	private boolean userExists(String user) {
 		return this.users.get(user) != null;
 	}
 	
+	/*
+	 * Retourne si un utilisateur est authentifie
+	 */
 	private boolean userIsLogged(String user) {
 		return this.loggedUsers.contains(user);
 	}
 
-	private void run() {
-		if (System.getSecurityManager() == null) {
-			System.setSecurityManager(new SecurityManager());
+	/*
+	 * Determine si le message contient la liste de mots
+	 */
+	private static boolean containsWords(String message, String[] words) {
+		int wordsFound = 0;
+		
+		for (String word : words) {
+			if (message.contains(word)) {
+				wordsFound++;
+			}
 		}
-
-		try {
-			ServerInterface stub = (ServerInterface) UnicastRemoteObject
-					.exportObject(this, 0);
-
-			Registry registry = LocateRegistry.getRegistry();
-			registry.rebind("server", stub);
-			System.out.println("Server ready.");
-		} catch (ConnectException e) {
-			System.err
-					.println("Impossible de se connecter au registre RMI. Est-ce que rmiregistry est lancé ?");
-			System.err.println();
-			System.err.println("Erreur: " + e.getMessage());
-		} catch (Exception e) {
-			System.err.println("Erreur: " + e.getMessage());
-		}
+		
+		return wordsFound == words.length;
 	}
 
 	/*
@@ -193,6 +223,9 @@ public class Server extends RemoteServer implements ServerInterface {
 		return response.toString();
 	}
 
+	/*
+	 * Retourne la liste de groupes de multidiffusion si le checksum est different
+	 */
 	@Override
 	public String getGroupList(String checksum, String login) throws RemoteException {
 		JsonObject response = new JsonObject();
@@ -217,6 +250,9 @@ public class Server extends RemoteServer implements ServerInterface {
 		return response.toString();
 	}
 
+	/*
+	 * Met-a-jour la liste de groupes de multidiffusion si elle est bien verouillee par l'utilisateur avec le login
+	 */
 	@Override
 	public String pushGroupList(String groupsDef, String login) throws RemoteException {
 		// Check if user is logged
@@ -237,6 +273,9 @@ public class Server extends RemoteServer implements ServerInterface {
 		return "Les modifications apportees a la liste de groupes globale sont publiees avec succes";
 	}
 
+	/*
+	 * Verrouille la liste de groupes globale pour l'utilisateur login
+	 */
 	@Override
 	public String lockGroupList(String login) throws RemoteException {
 		// Check if user is logged
@@ -267,6 +306,9 @@ public class Server extends RemoteServer implements ServerInterface {
 		return "La liste de groupes globale est verrouillee avec succes. Votre lock expirera dans " + timeout / 1000 + "s";
 	}
 
+	/*
+	 * Envoi (cree) un courriel au destinataire ou a un courriel de multidiffusion
+	 */
 	@Override
 	public String sendMail(String email) throws RemoteException {
 		JsonObject emailJson = new JsonParser().parse(email).getAsJsonObject();
@@ -348,6 +390,9 @@ public class Server extends RemoteServer implements ServerInterface {
 		return result;
 	}
 	
+	/*
+	 * Retourne les courriels a l'utilisateur login
+	 */
 	@Override
 	public String listMails(boolean justUnread, String login) throws RemoteException {
 		JsonObject response = new JsonObject();
@@ -393,6 +438,9 @@ public class Server extends RemoteServer implements ServerInterface {
 		return response.toString();
 	}
 	
+	/*
+	 * Retourne le contenu du courriel avec l'identifiant id
+	 */
 	public String readMail(int id, String login) throws RemoteException {
 		JsonObject response = new JsonObject();
 		
@@ -435,6 +483,9 @@ public class Server extends RemoteServer implements ServerInterface {
 		return response.toString();
 	}
 
+	/*
+	 * Supprime le courriel avec l'identifiant id
+	 */
 	@Override
 	public String deleteMail(int id, String login) throws RemoteException {		
 		// Check if user is logged
@@ -463,6 +514,9 @@ public class Server extends RemoteServer implements ServerInterface {
 		return "L'id du courriel n'existe pas.";
 	}
 
+	/*
+	 * Retourne les courriels dont le contenu contient chaque mot-clé
+	 */
 	@Override
 	public String findMail(String args, String login) throws RemoteException {		
 		JsonObject response = new JsonObject();
@@ -509,18 +563,9 @@ public class Server extends RemoteServer implements ServerInterface {
 		return response.toString();
 	}
 	
-	private static boolean containsWords(String message, String[] words) {
-		int wordsFound = 0;
-		
-		for (String word : words) {
-			if (message.contains(word)) {
-				wordsFound++;
-			}
-		}
-		
-		return wordsFound == words.length;
-	}
-
+	/*
+	 * Deconnecte l'utilisteur login
+	 */
 	@Override
 	public String disconnectSession(String login) throws RemoteException {
 		// Check if user is logged

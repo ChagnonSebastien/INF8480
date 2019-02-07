@@ -1,3 +1,8 @@
+/*
+ * @authors : Sébastien Chagnon (1804702), Pierre To (1734636)
+ * TP1 - INF8480
+ */
+
 package ca.polymtl.inf8480.tp1.exo2.client;
 
 import java.io.File;
@@ -18,11 +23,13 @@ import ca.polymtl.inf8480.tp1.exo2.shared.JsonUtils;
 import ca.polymtl.inf8480.tp1.exo2.shared.ServerInterface;
 
 public enum ShellCmds {
+	// get-group-list : recupere la liste de groupes globale du serveur
 	GET_GROUP_LIST ("get-group-list") {
 		@Override
 		public void execute(String login, ServerInterface server, String userDir, String args, Scanner scanner) throws RemoteException {
 			File groupListFile = new File(userDir, "grouplist.json");
 
+			// obtention du checksum du fichier local
 			String checksum = "";
 			if (groupListFile.exists())
 				checksum = Hash.MD5.checksum(groupListFile);
@@ -47,9 +54,9 @@ public enum ShellCmds {
 			
 			JsonUtils.writeToFile(content, groupListFile);
 			System.out.println("La liste des groupes a ete mise a jour");
-			
 		}
 	},
+	// publish-group-list : met a jour la liste de groupes globale du serveur
 	PUSH_GROUP_LIST ("publish-group-list") {
 		@Override
 		public void execute(String login, ServerInterface server, String userDir, String args, Scanner scanner) throws RemoteException {
@@ -73,12 +80,14 @@ public enum ShellCmds {
 			}
 		}
 	},
+	// lock-group-list : verrouille la liste de groupe globale pour mise-a-jour
 	LOCK_GROUP_LIST ("lock-group-list") {
 		@Override
 		public void execute(String login, ServerInterface server, String userDir, String args, Scanner scanner) throws RemoteException {
 			System.out.println(server.lockGroupList(login));
 		}
 	},
+	// create-group abc@xyz.co : ajoute l'adresse de multidiffusion abc@xyz.co sans utilisateur
 	CREATE_GROUP ("create-group") {
 		@Override
 		public void execute(String login, ServerInterface server, String userDir, String args, Scanner scanner) throws RemoteException {
@@ -118,6 +127,7 @@ public enum ShellCmds {
 			}
 		}
 	},
+	// join-group abc@xyz.co -u 123@poly.ca : ajoute l'adresse 123@poly.ca au groupe de multidiffusion abc@xyz.co
 	JOIN_GROUP ("join-group") {
 		@Override
 		public void execute(String login, ServerInterface server, String userDir, String args, Scanner scanner) throws RemoteException {
@@ -186,6 +196,7 @@ public enum ShellCmds {
 			}
 		}
 	},
+	// send -s \"SUJET\" abc@xyz.co : envoie un courriel avec le sujet SUJET a abc@xyz.co
 	SEND_MAIL ("send") {
 		@Override
 		public void execute(String login, ServerInterface server, String userDir, String args, Scanner scanner) throws RemoteException {
@@ -245,6 +256,8 @@ public enum ShellCmds {
 			System.out.println(server.sendMail(email.toString()));
 		}
 	},
+	// list : affiche la liste de tous les courriels
+	// list -u : affiche la liste de courriels non lus
 	LIST_MAIL ("list") {
 		@Override
 		public void execute(String login, ServerInterface server, String userDir, String args, Scanner scanner) throws RemoteException {
@@ -252,6 +265,7 @@ public enum ShellCmds {
 			listMails(login, server, justUnread);
 		}
 	},
+	// read : lire le contenu d'un courriel avec son identifiant
 	READ_MAIL ("read") {
 		@Override
 		public void execute(String login, ServerInterface server, String userDir, String args, Scanner scanner) throws RemoteException {
@@ -278,6 +292,7 @@ public enum ShellCmds {
 			} while (true);
 		}
 	},
+	// delete : supprime le courriel avec son identifiant
 	DELETE_MAIL ("delete") {
 		@Override
 		public void execute(String login, ServerInterface server, String userDir, String args, Scanner scanner) throws RemoteException {
@@ -297,6 +312,7 @@ public enum ShellCmds {
 			} while (true);
 		}
 	},
+	// search mot1 mot2 : affiche les courriels dont le contenu contient les mots mot1 et mot2
 	SEARCH_MAIL ("search") {
 		@Override
 		public void execute(String login, ServerInterface server, String userDir, String args, Scanner scanner) throws RemoteException {
@@ -372,6 +388,9 @@ public enum ShellCmds {
 		throw new IllegalArgumentException(cmd + " is not a valid command");
 	}
 	
+	/*
+	 * Liste les courriels
+	 */
 	private static void listMails(String login, ServerInterface server, boolean justUnread) throws RemoteException {
 		JsonObject response = new JsonParser().parse(server.listMails(justUnread, login)).getAsJsonObject();
 		
