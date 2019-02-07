@@ -1,3 +1,8 @@
+/*
+ * @authors : Sébastien Chagnon (1804702), Pierre To (1734636)
+ * TP1 - INF8480
+ */
+
 package ca.polymtl.inf8480.tp1.exo2.client;
 
 import java.io.File;
@@ -12,6 +17,9 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Scanner;
 
+import com.google.gson.JsonObject;
+import com.google.gson.JsonParser;
+
 import ca.polymtl.inf8480.tp1.exo2.shared.ServerInterface;
 
 public class Client {
@@ -19,18 +27,35 @@ public class Client {
 		String distantHostname = null;
 
 		if (args.length > 0) {
-			// TODO remettre
-			// distantHostname = args[0];
+			distantHostname = args[0];
 		}
 
 		Client client = new Client(distantHostname);
+		
+		// Prévention de la fermeture non desiree du client
+		Runtime.getRuntime().addShutdownHook(
+			new Thread() {
+				@Override
+				public void run() {
+					if (client.serverStub != null && client.login != null) {
+						try {
+							client.serverStub.disconnectSession(client.login);
+						} catch (RemoteException e) {
+							e.printStackTrace();
+						}
+					}
+				}
+			}
+		);
+		
 		client.run();
 	}
 
+	// Attributs
 	private ServerInterface serverStub = null;
-	private String login;
-	private String clientDir;
-	private String userDir;
+	private String login = null;
+	private String clientDir = null; // repertoire du client sur son ordinateur
+	private String userDir = null; // repertoire de l'utilisateur (courriel)
 
 	public Client(String distantServerHostname) {
 		super();
@@ -42,7 +67,7 @@ public class Client {
 		if (distantServerHostname != null) {
 			serverStub = loadServerStub(distantServerHostname);
 		} else {
-			serverStub = loadServerStub("127.0.0.1");
+			serverStub = loadServerStub("127.0.0.1"); // serveur local
 		}
 		
 		clientDir = Paths.get(System.getProperty("user.dir"), "1734636-1804702-client").toString();
@@ -72,27 +97,34 @@ public class Client {
 		return stub;
 	}
 
+	/*
+	 * Appel a distance avec Java RMI
+	 */
 	private void appelRMI() {
 		try (Scanner scanner = new Scanner(System.in)) {
-			// Ouverture de session
-			this.login = openSession(scanner);
-			
-			this.userDir = Paths.get(clientDir, login).toString();
-			new File(userDir).mkdir();
-			
-			ShellCmds.GET_GROUP_LIST.execute(login, serverStub, this.userDir, null, null);
-			
-			// Envoi de requêtes
-			this.programLoop(scanner);
-
+			do {
+				// Ouverture de session
+				this.login = openSession(scanner);
+				
+				this.userDir = Paths.get(clientDir, login).toString();
+				new File(userDir).mkdir();
+				
+				ShellCmds.GET_GROUP_LIST.execute(login, serverStub, this.userDir, null, null);
+				
+				// Envoi de requêtes
+				this.programLoop(scanner);
+			} while(true);
 		} catch (RemoteException e) {
 			e.printStackTrace();
 		}
 	}
 
+	/*
+	 * Ouverture d'une session d'un utilisateur
+	 */
 	private String openSession(Scanner scanner) throws RemoteException {
 		String login;
-		String result = null;
+		JsonObject result = null;
 		boolean isLoggedIn = false;
 
 		do {
@@ -104,25 +136,21 @@ public class Client {
 			System.out.println("Veuillez entrer votre mot de passe:");
 			String password = scanner.nextLine();
 
-			result = serverStub.openSession(login, password);
-			isLoggedIn = result.equals(login);
-
-			if (isLoggedIn) {
-				System.out.println("Bienvenue dans votre boite a courriel " + login);
-			} else {
-				System.out.println("Erreur lors de la connection");
-			}
-
+			result = new JsonParser().parse(serverStub.openSession(login, password)).getAsJsonObject();
+			isLoggedIn = result.get("result").getAsBoolean();
+			System.out.println(result.get("content").getAsString());
 		} while (!isLoggedIn);
 
-		return result;
+		return result.get("login").getAsString();
 	}
 
+	/*
+	 * Envoi de requêtes au serveur
+	 */
 	private void programLoop(Scanner scanner) {
 		boolean end = false;
 		
 		do {
-
 			System.out.printf("\n%s$ ", this.login);
 			String request = scanner.nextLine();
 			List<String> args = new ArrayList<String>(Arrays.asList(request.split(" ", 3)));
@@ -133,15 +161,40 @@ public class Client {
 			}
 			
 			if (!args.get(0).equals("./client")) {
-				System.out.printf("bash: %s: commande inexistante\n", args.get(0));
+				System.out.printf("bash: %s: commande inexistante. Vos commandes doivent tous commencer par \"./client\".\n", args.get(0));
 				continue;
 			}
 			
-			if (args.size() == 1) {
-				// Display help
+			// Afficher l'aide
+			if (args.size() == 1 || args.get(1).equals("help")) {
+				System.out.println("Commandes du systeme \"./client\" de courriel :");
+				System.out.println("disconnect : deconnecte l'utilisateur actif");
+				System.out.println("get-group-list : recupere la liste de groupes globale du serveur");
+				System.out.println("lock-group-list : verrouille la liste de groupe globale pour mise-a-jour");
+				System.out.println("publish-group-list : met a jour la liste de groupes globale du serveur");
+				System.out.println("create-group abc@xyz.co : ajoute l'adresse de multidiffusion abc@xyz.co sans utilisateur");
+				System.out.println("join-group abc@xyz.co -u 123@poly.ca : ajoute l'adresse 123@poly.ca au groupe de multidiffusion abc@xyz.co");
+				System.out.println("send -s \"SUJET\" abc@xyz.co : envoie un courriel avec le sujet SUJET a abc@xyz.co");
+				System.out.println("list : affiche la liste de tous les courriels");
+				System.out.println("list -u : affiche la liste de courriels non lus");
+				System.out.println("read : lire le contenu d'un courriel avec son identifiant");
+				System.out.println("delete : supprime le courriel avec son identifiant");
+				System.out.println("search mot1 mot2 : affiche les courriels dont le contenu contient les mots mot1 et mot2");
 				continue;
 			}
 			
+			// Deconnexion du client
+			if (args.get(1).equals("disconnect")) {
+				try {
+					System.out.println(serverStub.disconnectSession(login));
+				} catch (RemoteException e) {
+					e.printStackTrace();
+				}
+				this.login = null;
+				break;
+			}
+			
+			// Commande du terminal a envoyer au serveur
 			ShellCmds command;
 			try {
 				command = ShellCmds.getByName(args.get(1));
@@ -156,10 +209,7 @@ public class Client {
 				e.printStackTrace();
 			}
 			
-
 		} while (!end);
-		
-		scanner.close();
 	}
 
 }

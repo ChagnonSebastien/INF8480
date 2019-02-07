@@ -1,3 +1,8 @@
+/*
+ * @authors : Sébastien Chagnon (1804702), Pierre To (1734636)
+ * TP1 - INF8480
+ */
+
 package ca.polymtl.inf8480.tp1.exo2.shared;
 
 import java.rmi.Remote;
@@ -16,5 +21,13 @@ public interface ServerInterface extends Remote {
 	public String sendMail(String email) throws RemoteException;
 	
 	public String listMails(boolean justUnread, String login) throws RemoteException;
+	
+	public String readMail(int id, String login) throws RemoteException;
+	
+	public String deleteMail(int id, String login) throws RemoteException;
+
+	public String findMail(String args, String login) throws RemoteException;
+	
+	public String disconnectSession(String login) throws RemoteException;
 	
 }

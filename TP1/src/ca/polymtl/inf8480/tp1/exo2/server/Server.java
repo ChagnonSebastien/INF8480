@@ -1,3 +1,8 @@
+/*
+ * @authors : Sébastien Chagnon (1804702), Pierre To (1734636)
+ * TP1 - INF8480
+ */
+
 package ca.polymtl.inf8480.tp1.exo2.server;
 
 import java.io.File;
@@ -35,6 +40,7 @@ public class Server extends RemoteServer implements ServerInterface {
 		server.run();
 	}
 
+	// Attributs
 	private String lockedUser = null;
 	private File groupListFile;
 	private File usersFile;
@@ -61,7 +67,29 @@ public class Server extends RemoteServer implements ServerInterface {
 		this.groupListFile = this.getGroupList();
 		loggedUsers = new HashSet<String>();
 	}
+	
+	private void run() {
+		if (System.getSecurityManager() == null) {
+			System.setSecurityManager(new SecurityManager());
+		}
 
+		try {
+			ServerInterface stub = (ServerInterface) UnicastRemoteObject.exportObject(this, 0);
+			Registry registry = LocateRegistry.getRegistry();
+			registry.rebind("server", stub);
+			System.out.println("Server ready.");
+		} catch (ConnectException e) {
+			System.err.println("Impossible de se connecter au registre RMI. Est-ce que rmiregistry est lancé ?");
+			System.err.println();
+			System.err.println("Erreur: " + e.getMessage());
+		} catch (Exception e) {
+			System.err.println("Erreur: " + e.getMessage());
+		}
+	}
+
+	/*
+	 * Obtient les utilisateurs ou en crée par defaut
+	 */
 	private void getUsers() {
 		this.usersFile = new File(serverDirPath, "users.json");
 
@@ -97,6 +125,9 @@ public class Server extends RemoteServer implements ServerInterface {
 		}
 	}
 	
+	/*
+	 * Obtient la liste de groupes globale ou en cree une par defaut
+	 */
 	private File getGroupList() {
 		File groupListFile = new File(serverDirPath, "grouplist.json");
 
@@ -119,7 +150,7 @@ public class Server extends RemoteServer implements ServerInterface {
 			}
 		}
 		
-		// Lire les groupes de diffusion dans le fichier
+		// Lire les groupes de multidiffusion dans le fichier
 		try {
 			FileReader reader = new FileReader(groupListFile);
 			this.groups = new JsonParser().parse(reader).getAsJsonObject();
@@ -130,34 +161,33 @@ public class Server extends RemoteServer implements ServerInterface {
 		return groupListFile;
 	}
 	
+	/*
+	 * Retourne si un utilisateur existe
+	 */
 	private boolean userExists(String user) {
 		return this.users.get(user) != null;
 	}
 	
+	/*
+	 * Retourne si un utilisateur est authentifie
+	 */
 	private boolean userIsLogged(String user) {
 		return this.loggedUsers.contains(user);
 	}
 
-	private void run() {
-		if (System.getSecurityManager() == null) {
-			System.setSecurityManager(new SecurityManager());
+	/*
+	 * Determine si le message contient la liste de mots
+	 */
+	private static boolean containsWords(String message, String[] words) {
+		int wordsFound = 0;
+		
+		for (String word : words) {
+			if (message.contains(word)) {
+				wordsFound++;
+			}
 		}
-
-		try {
-			ServerInterface stub = (ServerInterface) UnicastRemoteObject
-					.exportObject(this, 0);
-
-			Registry registry = LocateRegistry.getRegistry();
-			registry.rebind("server", stub);
-			System.out.println("Server ready.");
-		} catch (ConnectException e) {
-			System.err
-					.println("Impossible de se connecter au registre RMI. Est-ce que rmiregistry est lancé ?");
-			System.err.println();
-			System.err.println("Erreur: " + e.getMessage());
-		} catch (Exception e) {
-			System.err.println("Erreur: " + e.getMessage());
-		}
+		
+		return wordsFound == words.length;
 	}
 
 	/*
@@ -165,16 +195,37 @@ public class Server extends RemoteServer implements ServerInterface {
 	 */
 	@Override
 	public String openSession(String login, String password) throws RemoteException {
+		JsonObject response = new JsonObject();
 		
-		if (this.users.get(login) == null ||
-				!this.users.get(login).getAsJsonObject().get("password").getAsString().equals(password) ||
-				this.loggedUsers.contains(login))
-			return "";
+		// Check if user is already logged
+		if (userIsLogged(login)) {
+			response.addProperty("result", false);
+			response.addProperty("content", "Vous etes deja authentifie sur une autre session.");
+			return response.toString();
+		}
+		
+		if (this.users.get(login) == null) {
+			response.addProperty("result", false);
+			response.addProperty("content", "L'adresse courriel n'existe pas.");
+			return response.toString();
+		}
+		
+		if (!this.users.get(login).getAsJsonObject().get("password").getAsString().equals(password)) {
+			response.addProperty("result", false);
+			response.addProperty("content", "Le mot de passe n'est pas entre correctement.");
+			return response.toString();
+		}
 		
 		loggedUsers.add(login);
-		return login;
+		response.addProperty("result", true);
+		response.addProperty("content", "Bienvenue dans votre boite a courriel " + login + ".");
+		response.addProperty("login", login);
+		return response.toString();
 	}
 
+	/*
+	 * Retourne la liste de groupes de multidiffusion si le checksum est different
+	 */
 	@Override
 	public String getGroupList(String checksum, String login) throws RemoteException {
 		JsonObject response = new JsonObject();
@@ -199,6 +250,9 @@ public class Server extends RemoteServer implements ServerInterface {
 		return response.toString();
 	}
 
+	/*
+	 * Met-a-jour la liste de groupes de multidiffusion si elle est bien verouillee par l'utilisateur avec le login
+	 */
 	@Override
 	public String pushGroupList(String groupsDef, String login) throws RemoteException {
 		// Check if user is logged
@@ -219,6 +273,9 @@ public class Server extends RemoteServer implements ServerInterface {
 		return "Les modifications apportees a la liste de groupes globale sont publiees avec succes";
 	}
 
+	/*
+	 * Verrouille la liste de groupes globale pour l'utilisateur login
+	 */
 	@Override
 	public String lockGroupList(String login) throws RemoteException {
 		// Check if user is logged
@@ -249,6 +306,9 @@ public class Server extends RemoteServer implements ServerInterface {
 		return "La liste de groupes globale est verrouillee avec succes. Votre lock expirera dans " + timeout / 1000 + "s";
 	}
 
+	/*
+	 * Envoi (cree) un courriel au destinataire ou a un courriel de multidiffusion
+	 */
 	@Override
 	public String sendMail(String email) throws RemoteException {
 		JsonObject emailJson = new JsonParser().parse(email).getAsJsonObject();
@@ -269,12 +329,17 @@ public class Server extends RemoteServer implements ServerInterface {
 		if (elem != null) {
 			// Courriel envoye a un groupe
 			JsonArray groupList = elem.getAsJsonArray();
+			
+			if (groupList.size() == 0) {
+				result += "L'adresse de multidiffusion ne contient aucun utilisateur.\n";
+			}
+			
 			for (JsonElement dest : groupList) {
 				if (userExists(dest.getAsString())) {
 					dests.add(dest.getAsString());
 				}
 				else {
-					result += "L'utilisateur " + dest.getAsString() + " dans le groupe de diffusion " + to + " n'existe pas.\n";
+					result += "L'utilisateur " + dest.getAsString() + " dans le groupe de multidiffusion " + to + " n'existe pas.\n";
 				}
 			}
 		}
@@ -316,7 +381,7 @@ public class Server extends RemoteServer implements ServerInterface {
 		}
 		
 		if (dests.size() > 0) {
-			result += "Courriel envoye avec succes a " + (dests.size() > 1 ? ("la liste de diffusion " + to) : to);
+			result += "Courriel envoye avec succes a " + (dests.size() > 1 ? ("la liste de multidiffusion " + to) : to);
 		}
 		else {
 			result += "Courriel non envoye";
@@ -325,6 +390,9 @@ public class Server extends RemoteServer implements ServerInterface {
 		return result;
 	}
 	
+	/*
+	 * Retourne les courriels a l'utilisateur login
+	 */
 	@Override
 	public String listMails(boolean justUnread, String login) throws RemoteException {
 		JsonObject response = new JsonObject();
@@ -351,7 +419,6 @@ public class Server extends RemoteServer implements ServerInterface {
 			} catch (Exception e) {
 				e.printStackTrace();
 			}
-			
 		}
 		
 		messages.sort(new Comparator<JsonObject>() {
@@ -369,6 +436,145 @@ public class Server extends RemoteServer implements ServerInterface {
 		response.addProperty("content", responseContent.toString());
 		response.addProperty("mailCount", listOfFiles.length);
 		return response.toString();
+	}
+	
+	/*
+	 * Retourne le contenu du courriel avec l'identifiant id
+	 */
+	public String readMail(int id, String login) throws RemoteException {
+		JsonObject response = new JsonObject();
+		
+		// Check if user is logged
+		if (!userIsLogged(login)) {
+			response.addProperty("result", false);
+			response.addProperty("content", "Vous n'etes pas authentifie. Que faites-vous ici?");
+			return response.toString();
+		}
+		
+		String destFolderPath = Paths.get(this.emailsPath, login).toString();
+		File destFolder = new File(destFolderPath);
+		destFolder.mkdir();
+		
+		File[] listOfFiles = destFolder.listFiles();
+		JsonObject message = null;
+		
+		for (File messageFile : listOfFiles) {
+			try (FileReader reader = new FileReader(messageFile)) {
+				JsonObject m = new JsonParser().parse(reader).getAsJsonObject();
+				if (m.get("id").getAsInt() == id) {
+					message = m;
+					m.addProperty("read", true);
+					JsonUtils.writeToFile(m.toString(), messageFile);
+					break;
+				}
+			} catch (Exception e) {
+				e.printStackTrace();
+			}
+		}
+		
+		if (message == null) {
+			response.addProperty("result", false);
+			response.addProperty("content", "L'id du courriel n'existe pas.");
+			return response.toString();
+		}
+		
+		response.addProperty("result", true);
+		response.addProperty("content", message.get("content").getAsString());
+		return response.toString();
+	}
+
+	/*
+	 * Supprime le courriel avec l'identifiant id
+	 */
+	@Override
+	public String deleteMail(int id, String login) throws RemoteException {		
+		// Check if user is logged
+		if (!userIsLogged(login)) {
+			return "Vous n'etes pas authentifie. Que faites-vous ici?";
+		}
+		
+		String destFolderPath = Paths.get(this.emailsPath, login).toString();
+		File destFolder = new File(destFolderPath);
+		destFolder.mkdir();
+		
+		File[] listOfFiles = destFolder.listFiles();
+		for (File messageFile : listOfFiles) {
+			try (FileReader reader = new FileReader(messageFile)) {
+				JsonObject m = new JsonParser().parse(reader).getAsJsonObject();
+				if (m.get("id").getAsInt() == id) {
+					reader.close();
+					messageFile.delete();
+					return "Le courriel avec l'id " + id + " a ete supprime avec succes." ;
+				}
+			} catch (Exception e) {
+				e.printStackTrace();
+			}
+		}
+		
+		return "L'id du courriel n'existe pas.";
+	}
+
+	/*
+	 * Retourne les courriels dont le contenu contient chaque mot-clé
+	 */
+	@Override
+	public String findMail(String args, String login) throws RemoteException {		
+		JsonObject response = new JsonObject();
+		
+		// Check if user is logged
+		if (!userIsLogged(login)) {
+			response.addProperty("result", false);
+			response.addProperty("content", "Vous n'etes pas authentifie. Que faites-vous ici?");
+			return response.toString();
+		}
+		
+		String destFolderPath = Paths.get(this.emailsPath, login).toString();
+		File destFolder = new File(destFolderPath);
+		destFolder.mkdir();
+		
+		File[] listOfFiles = destFolder.listFiles();
+		List<JsonObject> messages = new ArrayList<>();
+		
+		for (File messageFile : listOfFiles) {
+			try (FileReader reader = new FileReader(messageFile)) {
+				JsonObject m = new JsonParser().parse(reader).getAsJsonObject();
+				if (containsWords(m.get("content").getAsString(), args.split(" "))) {
+					messages.add(m);
+				}
+			} catch (Exception e) {
+				e.printStackTrace();
+			}
+		}
+		
+		messages.sort(new Comparator<JsonObject>() {
+			@Override
+			public int compare(JsonObject o1, JsonObject o2) {
+				return o1.get("id").getAsInt() - o2.get("id").getAsInt();
+			}
+		});
+		
+		JsonArray responseContent = new JsonArray();
+		for (JsonObject message : messages)
+			responseContent.add(message);
+
+		response.addProperty("result", true);
+		response.addProperty("content", responseContent.toString());
+		response.addProperty("mailCount", messages.size());
+		return response.toString();
+	}
+	
+	/*
+	 * Deconnecte l'utilisteur login
+	 */
+	@Override
+	public String disconnectSession(String login) throws RemoteException {
+		// Check if user is logged
+		if (!userIsLogged(login)) {
+			return "Vous n'etes pas authentifie. Que faites-vous ici?";
+		}
+		
+		this.loggedUsers.remove(login);
+		return "Vous avez ete deconnecte avec succes.";
 	}
 	
 }

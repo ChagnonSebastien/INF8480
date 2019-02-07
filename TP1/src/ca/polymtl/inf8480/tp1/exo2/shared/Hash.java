@@ -1,3 +1,9 @@
+/*
+ * @authors : Sébastien Chagnon (1804702), Pierre To (1734636)
+ * TP1 - INF8480
+ * Référence : https://memorynotfound.com/calculate-file-checksum-java/ 
+ */
+
 package ca.polymtl.inf8480.tp1.exo2.shared;
 
 import java.io.File;
@@ -5,6 +11,9 @@ import java.io.FileInputStream;
 import java.io.InputStream;
 import java.security.MessageDigest;
 
+/*
+ * Retourne le checksum d'un fichier avec differentes fonctions de hashage
+ */
 public enum Hash {
 
     MD5("MD5"),
