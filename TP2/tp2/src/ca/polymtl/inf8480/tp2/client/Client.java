@@ -3,7 +3,6 @@ package ca.polymtl.inf8480.tp2.client;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
-import java.nio.file.Paths;
 import java.rmi.AccessException;
 import java.rmi.NotBoundException;
 import java.rmi.RemoteException;
@@ -36,7 +35,6 @@ public class Client {
 
 	// Attributs
 	private BalancerInterface balancerStub = null;
-	private String clientDir;
 
 	public Client(String distantBalancerHostname) {
 		super();
@@ -50,16 +48,13 @@ public class Client {
 		} else {
 			balancerStub = loadBalancerStub("127.0.0.1"); // serveur local
 		}
-
-		clientDir = Paths.get(System.getProperty("user.dir"), "1734636-1804702-client").toString();
-		new File(clientDir).mkdir();
 	}
 
 	private BalancerInterface loadBalancerStub(String hostname) {
 		BalancerInterface stub = null;
 
 		try {
-			Registry registry = LocateRegistry.getRegistry(hostname, 5001);
+			Registry registry = LocateRegistry.getRegistry(hostname, 5000);
 			stub = (BalancerInterface) registry.lookup("balancer");
 		} catch (NotBoundException e) {
 			System.out.println("Erreur: Le nom '" + e.getMessage() + "' n'est pas defini dans le registre.");
@@ -83,7 +78,6 @@ public class Client {
 				
 				System.out.println(balancerStub.computeOperations(operations.toString()));
 			} catch (RemoteException e) {
-				// TODO Auto-generated catch block
 				e.printStackTrace();
 			}
 		}

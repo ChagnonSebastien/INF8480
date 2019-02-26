@@ -31,8 +31,8 @@ public class Balancer extends RemoteServer implements BalancerInterface {
 		}
 
 		try {
-			BalancerInterface stub = (BalancerInterface) UnicastRemoteObject.exportObject(this, 5000);
-			Registry registry = LocateRegistry.getRegistry(5001);
+			BalancerInterface stub = (BalancerInterface) UnicastRemoteObject.exportObject(this, 5001);
+			Registry registry = LocateRegistry.getRegistry(5000);
 			registry.rebind("balancer", stub);
 			System.out.println("Balancer ready.");
 		} catch (ConnectException e) {
