@@ -5,5 +5,5 @@ import java.rmi.RemoteException;
 
 public interface BalancerInterface extends Remote {
 
-	public String computeOperations(String ops) throws RemoteException;
+	public String computeOperations(String operations) throws RemoteException;
 }

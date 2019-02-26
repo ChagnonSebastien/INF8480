@@ -49,7 +49,7 @@ public class Balancer extends RemoteServer implements BalancerInterface {
 	public String computeOperations(String ops) throws RemoteException {
 		JsonArray operations = new JsonParser().parse(ops).getAsJsonArray();
 		
-		return operations.size() + "";
+		return operations.toString();
 	}
 
 }
