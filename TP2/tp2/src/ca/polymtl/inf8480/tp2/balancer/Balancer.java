@@ -7,6 +7,9 @@ import java.rmi.registry.Registry;
 import java.rmi.server.RemoteServer;
 import java.rmi.server.UnicastRemoteObject;
 
+import com.google.gson.JsonArray;
+import com.google.gson.JsonParser;
+
 import ca.polymtl.inf8480.tp2.shared.BalancerInterface;
 
 public class Balancer extends RemoteServer implements BalancerInterface {
@@ -44,7 +47,9 @@ public class Balancer extends RemoteServer implements BalancerInterface {
 
 	@Override
 	public String computeOperations(String ops) throws RemoteException {
-		return "weeeeee";
+		JsonArray operations = new JsonParser().parse(ops).getAsJsonArray();
+		
+		return operations.size() + "";
 	}
 
 }

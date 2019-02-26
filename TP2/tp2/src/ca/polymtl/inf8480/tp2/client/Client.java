@@ -1,12 +1,17 @@
 package ca.polymtl.inf8480.tp2.client;
 
+import java.io.BufferedReader;
 import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.FileReader;
 import java.nio.file.Paths;
 import java.rmi.AccessException;
 import java.rmi.NotBoundException;
 import java.rmi.RemoteException;
 import java.rmi.registry.LocateRegistry;
 import java.rmi.registry.Registry;
+
+import com.google.gson.JsonArray;
 
 import ca.polymtl.inf8480.tp2.shared.BalancerInterface;
 
@@ -66,9 +71,18 @@ public class Client {
 		return stub;
 	}
 
-	private void run(String orerationFileName) {
+	private void run(String operationFileName) {
 		if (balancerStub != null) {
 			try {
+				
+				JsonArray operations = parseOperations(operationFileName);
+				if (operations == null) {
+					System.out.println("Ce fichier d'operations n'existe pas.");
+				}
+				
+				
+				
+				
 				System.out.println(balancerStub.computeOperations(""));
 			} catch (RemoteException e) {
 				// TODO Auto-generated catch block
@@ -76,5 +90,28 @@ public class Client {
 			}
 		}
 	}
+
+	private JsonArray parseOperations(String operationFileName) {
+		File operationsFile = new File(operationFileName);
+		if (!operationsFile.exists()) {
+			return null;
+		}
+		
+		try {
+			BufferedReader reader = new BufferedReader(new FileReader(operationsFile));
+			
+		} catch (FileNotFoundException e) {
+			e.printStackTrace();
+		}
+		return null;
+		
+		
+		
+		
+		
+		
+	}
+	
+	
 
 }
