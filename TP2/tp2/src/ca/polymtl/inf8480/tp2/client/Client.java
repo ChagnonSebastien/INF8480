@@ -12,6 +12,7 @@ import java.util.Scanner;
 
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
+import com.google.gson.JsonParser;
 
 import ca.polymtl.inf8480.tp2.shared.BalancerInterface;
 
@@ -72,7 +73,9 @@ public class Client {
 					System.out.println("Ce fichier d'operations n'existe pas.");
 				}
 				
-				System.out.println(balancerStub.computeOperations(operations.toString()));
+				JsonObject response = new JsonParser().parse(balancerStub.computeOperations(operations.toString())).getAsJsonObject();
+				
+				System.out.println(response.get("value"));
 			} catch (RemoteException e) {
 				e.printStackTrace();
 			}
@@ -96,7 +99,8 @@ public class Client {
 				String operande = line[1];
 				
 				JsonObject op = new JsonObject();
-				op.addProperty(operation, operande);
+				op.addProperty("operation", operation);
+				op.addProperty("operande", operande);
 				operations.add(op);
 			}
 			
