@@ -59,9 +59,7 @@ public class Server extends RemoteServer implements ServerInterface {
 
 		try {
 			Registry registry = LocateRegistry.getRegistry(directoryHostname, 5000);
-			System.out.println("REGISTRY OK");
 			stub = (DirectoryInterface) registry.lookup("directory");
-			System.out.println("DirectoryStub ok");
 		} catch (NotBoundException e) {
 			System.out.println("Erreur: Le nom '" + e.getMessage() + "' n'est pas defini dans le registre.");
 		} catch (AccessException e) {
