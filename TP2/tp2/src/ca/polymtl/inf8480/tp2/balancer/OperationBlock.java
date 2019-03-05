@@ -2,43 +2,39 @@ package ca.polymtl.inf8480.tp2.balancer;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
-import com.google.gson.JsonArray;
-import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 
-public class OperationBlock extends ArrayList<JsonObject> {
+import ca.polymtl.inf8480.tp2.shared.ServerInterface;
 
-	int value = -1;
-	OperationBlock parent;
-	OperationBlock firstChild;
-	OperationBlock secondChild;
+public class OperationBlock extends Thread {
 
-	private static final long serialVersionUID = 7281619264355830643L;
+	List<JsonObject> operations;
+	Map<String, Integer> serversCalled;
+	
+	ServerInterface toCall;
 
-	public OperationBlock(JsonArray operations) {
-		for (JsonElement operation : operations) {
-			this.add(operation.getAsJsonObject());
-		}
+	public OperationBlock(List<JsonObject> operations) {
+		this.operations = operations;
+	}
+	
+	@Override
+	public void run() {
+		
 	}
 
-	public OperationBlock(List<JsonObject> subList, OperationBlock parent) {
-		super(subList);
-		this.parent = parent;
-	}
+	public synchronized int getResult(boolean secured) throws Exception {
+		if (serversCalled.size() < 2)
+			throw new Exception("Deux serveurs n'ont pas encore été contactés.");
+		
+		List<Integer> results = new ArrayList<Integer>(serversCalled.values());
+		if (results.get(0) == results.get(1))
+			return results.get(0);
 
-	public synchronized int getValue() {
-		if (value != -1) {
-			return value % 5000;
-		} else if (firstChild != null && secondChild != null) {
-			return (firstChild.getValue() + secondChild.getValue()) % 5000;
-		} else {
-			return -1;
-		}
-	}
-
-	public void split(int count) {
-		this.firstChild = new OperationBlock(this.subList(0, count), this);
-		this.secondChild = new OperationBlock(this.subList(count, this.size() - 10), this);
+		if (serversCalled.size() < 3)
+			throw new Exception("Les deux premiers serveurs appelés n'ont pas le même résultat. Un troixième serveur n'a pas encre été contacté.");
+		
+		return results.get(2);
 	}
 }
