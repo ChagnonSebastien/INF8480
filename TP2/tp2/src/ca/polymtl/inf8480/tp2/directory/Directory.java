@@ -19,8 +19,11 @@ public class Directory extends RemoteServer implements DirectoryInterface {
 
 	private static final long serialVersionUID = 5906690575291221944L;
 	
+	// Attributs
 	File serverConfigFile = null;
-
+	File balancerFile = null;
+	JsonObject servers = null;
+	
 	public static void main(String[] args) {
 		Directory directory = new Directory();
 		directory.run();
@@ -34,6 +37,14 @@ public class Directory extends RemoteServer implements DirectoryInterface {
 			System.out.println("Le fichier de configuration n'existe pas. Veuillez l'ajouter.");
 			System.exit(0);
 		}
+		
+		this.balancerFile = new File("authorized-balancers.json");
+		if (!this.balancerFile.exists()) {
+			System.out.println("Le fichier des repartiteurs autorises n'existe pas. Veuillez l'ajouter.");
+			System.exit(0);
+		}
+		
+		this.servers = new JsonObject();
 	}
 
 	private void run() {
@@ -69,11 +80,39 @@ public class Directory extends RemoteServer implements DirectoryInterface {
 						
 			response.addProperty("result", true);
 			response.add("value", serverConfig);
+			
+			// Se souvenir de la capacite de chaque serveur
+			this.servers.addProperty(hostname, serverConfig.get("q").getAsInt());
 		} catch (FileNotFoundException e) {
 			e.printStackTrace();
 		}
 		
 		return response.toString();
 	}
+
+	@Override
+	public String getServers() throws RemoteException {
+		return this.servers.toString();
+	}
+	
+	@Override
+	public boolean authenticateBalancer(String login, String password) throws RemoteException {
+		try {
+			JsonObject balancers = new JsonParser().parse(new FileReader(this.balancerFile)).getAsJsonObject();
+			
+			if (!balancers.has(login)) {
+				return false;
+			}
+			
+			return balancers.get(login).getAsString().equals(password);
+		} catch (FileNotFoundException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		
+		return false;
+	}
+
+	
 
 }

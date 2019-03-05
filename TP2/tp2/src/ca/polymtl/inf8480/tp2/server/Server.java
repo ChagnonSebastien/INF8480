@@ -14,6 +14,8 @@ import java.rmi.registry.Registry;
 import java.rmi.server.RemoteServer;
 import java.rmi.server.UnicastRemoteObject;
 
+import com.google.gson.JsonArray;
+import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 
@@ -28,7 +30,9 @@ public class Server extends RemoteServer implements ServerInterface {
 	String address = ""; // adresse du serveur
 	int port = 0; // numero du port
 	double falseAnswerRatio = 0.0; // taux de reponse erronnee (serveur en mode securise : 0, non securise : 0.01 à 1)
-	int q = 0; // capacite du serveur (nombre d'operations mathematique)
+	int capacity = 0; // capacite du serveur (nombre d'operations mathematique)
+	
+	static Integer operationsCountAccepted = 0;
 	
 	private DirectoryInterface directoryStub = null;
 	
@@ -51,7 +55,7 @@ public class Server extends RemoteServer implements ServerInterface {
 	public Server(String hostname, String directoryHostname) {
 		super();
 		this.address = hostname;
-		this.directoryStub = loadDirectoryStub("127.0.0.1");
+		this.directoryStub = loadDirectoryStub(directoryHostname);
 	}
 	
 	private DirectoryInterface loadDirectoryStub(String directoryHostname) {
@@ -83,9 +87,9 @@ public class Server extends RemoteServer implements ServerInterface {
 							
 					this.port = serverConfig.get("port").getAsInt();
 					this.falseAnswerRatio = serverConfig.get("falseAnswerRatio").getAsDouble();
-					this.q = serverConfig.get("q").getAsInt();
+					this.capacity = serverConfig.get("q").getAsInt();
 					
-					System.out.println(this.address + "," + this.port + "," + this.falseAnswerRatio + "," + this.q);
+					System.out.println(this.address + "," + this.port + "," + this.falseAnswerRatio + "," + this.capacity);
 				}
 			} catch (RemoteException e) {
 				e.printStackTrace();
@@ -111,6 +115,64 @@ public class Server extends RemoteServer implements ServerInterface {
 		} catch (Exception e) {
 			System.err.println("Erreur: " + e.getMessage());
 		}
+	}
+	
+	private boolean checkCapacity(int operationSize) {
+		synchronized (Server.operationsCountAccepted) {
+			int operationsCount = operationSize + Server.operationsCountAccepted;
+			double rejectionRatio = (operationsCount - this.capacity) / (5.0 * this.capacity);
+			double currentRatio = Math.random();
+			
+			boolean isAccepted = currentRatio > rejectionRatio;
+			
+			if (isAccepted) {
+				Server.operationsCountAccepted += operationSize;
+			}
+			
+			System.out.println(operationSize + " " + Server.operationsCountAccepted + " " + rejectionRatio);
+			
+			return isAccepted;
+		}
+	}
+
+	@Override
+	public String compute(String request) throws RemoteException {
+		JsonObject requestJson = new JsonParser().parse(request).getAsJsonObject();
+		
+		String login = requestJson.get("login").getAsString();
+		String password = requestJson.get("password").getAsString();
+		JsonArray operations = requestJson.get("operations").getAsJsonArray();
+		
+		JsonObject response = new JsonObject();
+		
+		try {
+			if (directoryStub.authenticateBalancer(login, password)) {
+				boolean enoughCapacity = checkCapacity(operations.size());
+				response.addProperty("enoughCapacity", enoughCapacity);
+				
+				if (!enoughCapacity) {
+					return response.toString();
+				}
+				
+				int result = 1;
+				
+				for (JsonElement operation : operations) {
+					//String op = operation.getAsJsonObject().keySet()
+					//String operande = line[1];
+				}
+				
+				response.addProperty("result", result);
+				
+				synchronized (Server.operationsCountAccepted) {
+					Server.operationsCountAccepted -= operations.size();
+				}
+			}
+		}
+		catch(RemoteException e) {
+			e.printStackTrace();
+		}
+		
+		return response.toString();
 	}
 
 }
