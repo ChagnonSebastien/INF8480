@@ -68,7 +68,7 @@ public class Directory extends RemoteServer implements DirectoryInterface {
 			JsonObject serverConfig = configs.get(hostname).getAsJsonObject();
 						
 			response.addProperty("result", true);
-			response.addProperty("value", serverConfig.toString());
+			response.add("value", serverConfig);
 		} catch (FileNotFoundException e) {
 			e.printStackTrace();
 		}
