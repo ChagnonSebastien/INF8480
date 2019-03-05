@@ -26,10 +26,6 @@ public class Balancer extends RemoteServer implements BalancerInterface {
 	}
 
 	private void run() {
-		if (System.getSecurityManager() == null) {
-			System.setSecurityManager(new SecurityManager());
-		}
-
 		try {
 			BalancerInterface stub = (BalancerInterface) UnicastRemoteObject.exportObject(this, 5001);
 			Registry registry = LocateRegistry.getRegistry(5000);

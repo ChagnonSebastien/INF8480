@@ -12,4 +12,4 @@ HELP:
 
 EndOfMessage
 
-java -cp "$basepath"/client.jar:"$basepath"/shared.jar -Djava.security.policy="$basepath"/policy ca.polymtl.inf8480.tp2.client.Client $*
+java -cp "$basepath"/client.jar:"$basepath"/shared.jar -Djava.security.manager -Djava.security.policy="$basepath"/policy ca.polymtl.inf8480.tp2.client.Client $*

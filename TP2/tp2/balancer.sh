@@ -20,6 +20,7 @@ fi
 
 java -cp "$basepath"/balancer.jar:"$basepath"/shared.jar \
   -Djava.rmi.server.codebase=file:"$basepath"/shared.jar \
+  -Djava.security.manager \
   -Djava.security.policy="$basepath"/policy \
   -Djava.rmi.server.hostname="$IPADDR" \
   ca.polymtl.inf8480.tp2.balancer.Balancer

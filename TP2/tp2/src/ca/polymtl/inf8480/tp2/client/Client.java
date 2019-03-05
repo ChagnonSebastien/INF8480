@@ -38,10 +38,6 @@ public class Client {
 
 	public Client(String distantBalancerHostname) {
 		super();
-
-		if (System.getSecurityManager() == null) {
-			System.setSecurityManager(new SecurityManager());
-		}
 		
 		if (distantBalancerHostname != null) {
 			balancerStub = loadBalancerStub(distantBalancerHostname);

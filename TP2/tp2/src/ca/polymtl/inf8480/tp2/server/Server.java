@@ -17,7 +17,6 @@ import java.rmi.server.UnicastRemoteObject;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 
-import ca.polymtl.inf8480.tp2.shared.BalancerInterface;
 import ca.polymtl.inf8480.tp2.shared.DirectoryInterface;
 import ca.polymtl.inf8480.tp2.shared.ServerInterface;
 
@@ -100,10 +99,6 @@ public class Server extends RemoteServer implements ServerInterface {
 	}
 	
 	private void run() {
-		if (System.getSecurityManager() == null) {
-			System.setSecurityManager(new SecurityManager());
-		}
-
 		this.logToDirectory();
 		
 		try {

@@ -37,10 +37,6 @@ public class Directory extends RemoteServer implements DirectoryInterface {
 	}
 
 	private void run() {
-		if (System.getSecurityManager() == null) {
-			System.setSecurityManager(new SecurityManager());
-		}
-
 		try {
 			DirectoryInterface stub = (DirectoryInterface) UnicastRemoteObject.exportObject(this, 5050);
 			Registry registry = LocateRegistry.getRegistry(5000);
