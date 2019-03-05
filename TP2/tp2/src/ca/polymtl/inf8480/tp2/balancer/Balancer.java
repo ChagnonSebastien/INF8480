@@ -26,27 +26,34 @@ public class Balancer extends RemoteServer implements BalancerInterface {
 	// Attributs
 	private String login = "";
 	private String password = "";
+	private boolean secureMode = true;
 	
 	private DirectoryInterface directoryStub = null;
 	private JsonObject servers = null;
 
 	public static void main(String[] args) {
 		String directoryHostname = "";
+		boolean secureMode  = true;
 		
 		if (args.length > 0) {
-			directoryHostname = args[0];
+			secureMode = args[0].equals("true");
+		}
+		
+		if (args.length > 1) {
+			directoryHostname = args[1];
 		} else {
 			directoryHostname = "127.0.0.1";
 		}
 		
-		Balancer balancer = new Balancer(directoryHostname);
+		Balancer balancer = new Balancer(directoryHostname, secureMode);
 		balancer.run();
 	}
 
-	public Balancer(String directoryHostname) {
+	public Balancer(String directoryHostname, boolean secureMode) {
 		super();
 		this.login = "balancy";
 		this.password = "bal1";
+		this.secureMode = secureMode;
 		this.directoryStub = loadDirectoryStub(directoryHostname);
 		this.servers = new JsonObject();
 	}
@@ -158,6 +165,14 @@ public class Balancer extends RemoteServer implements BalancerInterface {
 			request.add("operations", this.getSubArray(operations, start, end));
 			
 			JsonObject operationResponse = new JsonParser().parse(stub.compute(request.toString())).getAsJsonObject();
+			boolean authenticated = operationResponse.get("authenticated").getAsBoolean();
+			
+			if (!authenticated) {
+				response.addProperty("result", false);
+				response.addProperty("value", "Le repartiteur ne peut pas s'authentifier aupres du service de repertoire de noms.");
+				return response.toString();
+			}
+			
 			boolean enoughCapacity = operationResponse.get("enoughCapacity").getAsBoolean();
 			
 			if (!enoughCapacity) {

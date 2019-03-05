@@ -13,6 +13,7 @@ import java.rmi.registry.LocateRegistry;
 import java.rmi.registry.Registry;
 import java.rmi.server.RemoteServer;
 import java.rmi.server.UnicastRemoteObject;
+import java.util.Random;
 
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
@@ -123,6 +124,7 @@ public class Server extends RemoteServer implements ServerInterface {
 			double rejectionRatio = (operationsCount - this.capacity) / (5.0 * this.capacity);
 			double currentRatio = Math.random();
 			
+			// les operations sont acceptees si on respecte le ratio de rejet (plus grand que)
 			boolean isAccepted = currentRatio > rejectionRatio;
 			
 			if (isAccepted) {
@@ -147,18 +149,34 @@ public class Server extends RemoteServer implements ServerInterface {
 		
 		try {
 			if (directoryStub.authenticateBalancer(login, password)) {
+				response.addProperty("authenticated", true);
+
+				// serveur verifie s'il n'est pas surcharge
 				boolean enoughCapacity = checkCapacity(operations.size());
 				response.addProperty("enoughCapacity", enoughCapacity);
-				
 				if (!enoughCapacity) {
 					return response.toString();
 				}
 				
-				int result = 1;
+				int result = 0;
 				
-				for (JsonElement operation : operations) {
-					//String op = operation.getAsJsonObject().keySet()
-					//String operande = line[1];
+				// serveur malicieux retourne une reponse aleatoire
+				if (this.falseAnswerRatio > Math.random()) {
+					result = new Random().nextInt(5000);
+				}
+				// serveur avec bon resultat
+				else {
+					for (JsonElement op : operations) {
+						String operation = op.getAsJsonObject().get("operation").getAsString();
+						int operande = op.getAsJsonObject().get("operande").getAsInt();
+						
+						if (operation.equals("pell")) {
+							result = (result + Operations.pell(operande)) % 5000;
+						}
+						else if (operation.equals("prime")) {
+							result = (result + Operations.prime(operande)) % 5000;
+						}
+					}
 				}
 				
 				response.addProperty("result", result);
@@ -166,6 +184,9 @@ public class Server extends RemoteServer implements ServerInterface {
 				synchronized (Server.operationsCountAccepted) {
 					Server.operationsCountAccepted -= operations.size();
 				}
+			}
+			else {
+				response.addProperty("authenticated", false);
 			}
 		}
 		catch(RemoteException e) {

@@ -75,7 +75,14 @@ public class Client {
 				
 				JsonObject response = new JsonParser().parse(balancerStub.computeOperations(operations.toString())).getAsJsonObject();
 				
-				System.out.println(response.get("value"));
+				boolean result = response.get("result").getAsBoolean();
+				
+				if (!result) {
+					System.out.println("Erreur : " + response.get("value"));
+				}
+				else {
+					System.out.println("Le resultat des operations du fichier " + operationFileName + " est " + response.get("value"));
+				}
 			} catch (RemoteException e) {
 				e.printStackTrace();
 			}
