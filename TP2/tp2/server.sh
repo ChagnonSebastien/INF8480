@@ -19,6 +19,7 @@ if [ -z "$1" ]
 fi
 
 java -cp "$basepath"/server.jar:"$basepath"/shared.jar \
+  -Djava.security.manager \
   -Djava.security.policy="$basepath"/policy \
   -Djava.rmi.server.hostname="$IPADDR" \
   ca.polymtl.inf8480.tp2.server.Server
