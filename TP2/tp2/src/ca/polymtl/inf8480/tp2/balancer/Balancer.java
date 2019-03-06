@@ -8,8 +8,12 @@ import java.rmi.registry.LocateRegistry;
 import java.rmi.registry.Registry;
 import java.rmi.server.RemoteServer;
 import java.rmi.server.UnicastRemoteObject;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
+import java.util.Random;
 
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
@@ -20,31 +24,31 @@ import ca.polymtl.inf8480.tp2.shared.DirectoryInterface;
 import ca.polymtl.inf8480.tp2.shared.ServerInterface;
 
 public class Balancer extends RemoteServer implements BalancerInterface {
-	
+
 	private static final long serialVersionUID = -3221999619303495281L;
-	
+
 	// Attributs
 	private String login = "";
 	private String password = "";
 	private boolean secureMode = true;
-	
+
 	private DirectoryInterface directoryStub = null;
 	private JsonObject servers = null;
 
 	public static void main(String[] args) {
 		String directoryHostname = "";
-		boolean secureMode  = true;
-		
+		boolean secureMode = true;
+
 		if (args.length > 0) {
 			secureMode = args[0].equals("true");
 		}
-		
+
 		if (args.length > 1) {
 			directoryHostname = args[1];
 		} else {
 			directoryHostname = "127.0.0.1";
 		}
-		
+
 		Balancer balancer = new Balancer(directoryHostname, secureMode);
 		balancer.run();
 	}
@@ -57,7 +61,7 @@ public class Balancer extends RemoteServer implements BalancerInterface {
 		this.directoryStub = loadDirectoryStub(directoryHostname);
 		this.servers = new JsonObject();
 	}
-	
+
 	private DirectoryInterface loadDirectoryStub(String directoryHostname) {
 		DirectoryInterface stub = null;
 
@@ -71,13 +75,13 @@ public class Balancer extends RemoteServer implements BalancerInterface {
 		} catch (RemoteException e) {
 			System.out.println("Erreur: " + e.getMessage());
 		}
-		
+
 		return stub;
 	}
-	
+
 	private Map<String, ServerInterface> loadServerStubs() {
 		Map<String, ServerInterface> serverStubs = new HashMap<>();
-		
+
 		for (String hostname : this.servers.keySet()) {
 			ServerInterface stub = null;
 
@@ -91,10 +95,10 @@ public class Balancer extends RemoteServer implements BalancerInterface {
 			} catch (RemoteException e) {
 				System.out.println("Erreur: " + e.getMessage());
 			}
-			
+
 			serverStubs.put(hostname, stub);
 		}
-		
+
 		return serverStubs;
 	}
 
@@ -111,16 +115,16 @@ public class Balancer extends RemoteServer implements BalancerInterface {
 		} catch (Exception e) {
 			System.err.println("Erreur: " + e.getMessage());
 		}
-		
+
 	}
-	
+
 	private JsonArray getSubArray(JsonArray array, int start, int end) {
 		JsonArray subArray = new JsonArray();
-		
+
 		for (int i = start; i < end; i++) {
 			subArray.add(array.get(i));
 		}
-		
+
 		return subArray;
 	}
 
@@ -128,10 +132,10 @@ public class Balancer extends RemoteServer implements BalancerInterface {
 	public String computeOperations(String ops) throws RemoteException {
 		// Get server hostnames from directory
 		this.servers = new JsonParser().parse(directoryStub.getServers()).getAsJsonObject();
-		
+
 		// Get server stubs
 		Map<String, ServerInterface> serverStubs = loadServerStubs();
-		
+
 		JsonObject response = new JsonObject();
 
 		// S'il n'y a aucun serveur enregistre dans le service de repertoire de noms
@@ -140,54 +144,150 @@ public class Balancer extends RemoteServer implements BalancerInterface {
 			response.addProperty("value", "Il n'y a aucun serveur disponible.");
 			return response.toString();
 		}
-		
+
 		JsonArray operations = new JsonParser().parse(ops).getAsJsonArray();
 		int value = 0;
-		
-		int nbOpsATraiter = operations.size();
-		int q = this.servers.get("127.0.0.1").getAsInt();
+
+		// On cree des blocs d'oppération ayant pour taille la capacite minimale parmi
+		// tous les serveurs.
+		int qMin = Integer.MAX_VALUE;
+		for (String ip : servers.keySet()) {
+			int q = servers.get(ip).getAsInt();
+			if (q < qMin)
+				qMin = q;
+		}
+
+		int opsToProcess = operations.size();
 		int start = 0;
-		int end = q;
-		
-		// TODO : verifier la capacitÃ© 
-		// TODO : faire la repartition du travail
-		while (nbOpsATraiter > 0) {
+		int end = qMin;
+
+		// Creation des Threads qui vont executer des blocs d'oprations.
+		List<OperationBlock> blocks = new ArrayList<>();
+		while (opsToProcess > 0) {
 			if (end > operations.size()) {
 				end = operations.size();
 			}
-			
-			ServerInterface stub = serverStubs.get("127.0.0.1");
-			
-			// Requete de calcul d'operation vers un serveur
-			JsonObject request = new JsonObject();
-			request.addProperty("login", this.login);
-			request.addProperty("password", this.password);
-			request.add("operations", this.getSubArray(operations, start, end));
-			
-			JsonObject operationResponse = new JsonParser().parse(stub.compute(request.toString())).getAsJsonObject();
-			boolean authenticated = operationResponse.get("authenticated").getAsBoolean();
-			
-			if (!authenticated) {
-				response.addProperty("result", false);
-				response.addProperty("value", "Le repartiteur ne peut pas s'authentifier aupres du service de repertoire de noms.");
-				return response.toString();
-			}
-			
-			boolean enoughCapacity = operationResponse.get("enoughCapacity").getAsBoolean();
-			
-			if (!enoughCapacity) {
-				// n'a pas fonctionnee TODO : envoyer au prochain serveur ou reesayer
-				System.out.println("Le serveur n'a pas assez de capacite pour traiter les ops");
-			} else {
-				int result = operationResponse.get("result").getAsInt();
-				value = (value + result) % 5000;
-			}
-			
-			nbOpsATraiter -= (end - start);
-			start += q;
-			end += q;
+
+			blocks.add(new OperationBlock(this.getSubArray(operations, start, end), this.login, this.password, start + " to " + end));
+
+			opsToProcess -= (end - start);
+			start += qMin;
+			end += qMin;
 		}
-		
+
+		// Initialement, tous les serveurs sont disponibles
+		Map<String, Boolean> serverAvailability = new HashMap<>();
+		for (String hostname : servers.keySet()) {
+			serverAvailability.put(hostname, true);
+		}
+
+		// Boucle d'execution
+		int index = 0;
+		while (blocks.size() > 0) {
+
+			OperationBlock block = blocks.get(index);
+			// Si le Thread a terminé sa precedente execution
+			//System.out.println("Thread " + block.getName() + " is Alive : " + block.isAlive());
+			if (!block.isAlive()) {
+
+				// Retourne l'erreur au client si l'authentification echoue
+				if (block.authenticationError) {
+					response.addProperty("result", false);
+					response.addProperty("value",
+							"Le repartiteur ne peut pas s'authentifier aupres du service de repertoire de noms.");
+					return response.toString();
+				}
+
+				if (block.serverError) {
+					response.addProperty("result", false);
+					response.addProperty("value",
+							"Le repartiteur ne peut pas s'authentifier aupres du service de repertoire de noms.");
+					return response.toString();
+				}
+
+				// Definir la disponibilite du serveur en fonction du resultat de la derniere
+				// execution sur le bloc d'operation
+				if (block.toCall != null) {
+					//System.out.println("block toCall != null");
+					//serverAvailability.put(block.toCall.getKey(), !block.capacityError);
+
+				}
+				//serverAvailability.put(block.toCall.getKey(), !block.capacityError);
+				
+				try {
+					int result = block.getResult(this.secureMode);
+					value += result;
+					value %= 5000;
+					blocks.remove(index);
+					System.out.println("Value is " + value);
+					
+				} catch (Exception e) {
+					//System.out.println(e.getMessage());
+					// En attente d'une reponse fiable
+	
+					// Trouver un stub disponible pour l'execution du thead
+					List<Entry<String, ServerInterface>> potentialStubs = new ArrayList<>();
+					for (Entry<String, ServerInterface> server : serverStubs.entrySet()) {
+						String hostname = server.getKey();
+						if (serverAvailability.get(hostname) && !block.hasServerBeenCalled(hostname)) {
+							potentialStubs.add(server);
+						}
+					}
+					System.out.println("Server Availability : " + serverAvailability.toString());
+					//System.out.println("Potential stubs : " + potentialStubs.size());
+
+					if (potentialStubs.size() > 0) {
+						
+						OperationBlock newBlock = block.clone();
+						newBlock.toCall = potentialStubs.get(new Random().nextInt(potentialStubs.size()));
+						newBlock.start();
+						blocks.set(index, newBlock);
+					}
+				}
+			}
+
+			// On passe au prochain Thread
+			if (++index >= blocks.size())
+				index = 0;
+		}
+
+		/*
+		 * int nbOpsATraiter = operations.size(); int q =
+		 * this.servers.get("127.0.0.1").getAsInt(); int start = 0; int end = q;
+		 * 
+		 * // TODO : verifier la capacitÃ© // TODO : faire la repartition du travail
+		 * while (nbOpsATraiter > 0) { if (end > operations.size()) { end =
+		 * operations.size(); }
+		 * 
+		 * ServerInterface stub = serverStubs.get("127.0.0.1");
+		 * 
+		 * // Requete de calcul d'operation vers un serveur JsonObject request = new
+		 * JsonObject(); request.addProperty("login", this.login);
+		 * request.addProperty("password", this.password); request.add("operations",
+		 * this.getSubArray(operations, start, end));
+		 * 
+		 * JsonObject operationResponse = new
+		 * JsonParser().parse(stub.compute(request.toString())).getAsJsonObject();
+		 * boolean authenticated =
+		 * operationResponse.get("authenticated").getAsBoolean();
+		 * 
+		 * if (!authenticated) { response.addProperty("result", false);
+		 * response.addProperty("value",
+		 * "Le repartiteur ne peut pas s'authentifier aupres du service de repertoire de noms."
+		 * ); return response.toString(); }
+		 * 
+		 * boolean enoughCapacity =
+		 * operationResponse.get("enoughCapacity").getAsBoolean();
+		 * 
+		 * if (!enoughCapacity) { // n'a pas fonctionnee TODO : envoyer au prochain
+		 * serveur ou reesayer System.out.
+		 * println("Le serveur n'a pas assez de capacite pour traiter les ops"); } else
+		 * { int result = operationResponse.get("result").getAsInt(); value = (value +
+		 * result) % 5000; }
+		 * 
+		 * nbOpsATraiter -= (end - start); start += q; end += q; }
+		 */
+
 		response.addProperty("result", true);
 		response.addProperty("value", value);
 		return response.toString();
