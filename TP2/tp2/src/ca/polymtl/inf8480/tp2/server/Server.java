@@ -90,13 +90,12 @@ public class Server extends RemoteServer implements ServerInterface {
 					this.falseAnswerRatio = serverConfig.get("falseAnswerRatio").getAsDouble();
 					this.capacity = serverConfig.get("q").getAsInt();
 					
-					System.out.println(this.address + "," + this.port + "," + this.falseAnswerRatio + "," + this.capacity);
 				}
 			} catch (RemoteException e) {
 				e.printStackTrace();
 			}
 		} else {
-			System.out.println("Veuillez démarrer le service de répertoire de noms avant un serveur.");
+			System.out.println("Veuillez demarrer le service de repertoire de noms avant un serveur.");
 			System.exit(0);
 		}
 	}
@@ -110,7 +109,7 @@ public class Server extends RemoteServer implements ServerInterface {
 			registry.rebind("server", stub);
 			System.out.println("Server ready.");
 		} catch (ConnectException e) {
-			System.err.println("Impossible de se connecter au registre RMI. Est-ce que rmiregistry est lancé ?");
+			System.err.println("Impossible de se connecter au registre RMI. Est-ce que rmiregistry est lance ?");
 			System.err.println();
 			System.err.println("Erreur: " + e.getMessage());
 		} catch (Exception e) {

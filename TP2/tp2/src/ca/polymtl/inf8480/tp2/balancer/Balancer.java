@@ -175,19 +175,12 @@ public class Balancer extends RemoteServer implements BalancerInterface {
 			end += qMin;
 		}
 
-		// Initialement, tous les serveurs sont disponibles
-		Map<String, Boolean> serverAvailability = new HashMap<>();
-		for (String hostname : servers.keySet()) {
-			serverAvailability.put(hostname, true);
-		}
-
 		// Boucle d'execution
 		int index = 0;
 		while (blocks.size() > 0) {
 
 			OperationBlock block = blocks.get(index);
 			// Si le Thread a terminé sa precedente execution
-			//System.out.println("Thread " + block.getName() + " is Alive : " + block.isAlive());
 			if (!block.isAlive()) {
 
 				// Retourne l'erreur au client si l'authentification echoue
@@ -204,37 +197,24 @@ public class Balancer extends RemoteServer implements BalancerInterface {
 							"Le repartiteur ne peut pas s'authentifier aupres du service de repertoire de noms.");
 					return response.toString();
 				}
-
-				// Definir la disponibilite du serveur en fonction du resultat de la derniere
-				// execution sur le bloc d'operation
-				if (block.toCall != null) {
-					//System.out.println("block toCall != null");
-					//serverAvailability.put(block.toCall.getKey(), !block.capacityError);
-
-				}
-				//serverAvailability.put(block.toCall.getKey(), !block.capacityError);
 				
 				try {
 					int result = block.getResult(this.secureMode);
 					value += result;
 					value %= 5000;
 					blocks.remove(index);
-					System.out.println("Value is " + value);
 					
 				} catch (Exception e) {
-					//System.out.println(e.getMessage());
 					// En attente d'une reponse fiable
 	
 					// Trouver un stub disponible pour l'execution du thead
 					List<Entry<String, ServerInterface>> potentialStubs = new ArrayList<>();
 					for (Entry<String, ServerInterface> server : serverStubs.entrySet()) {
 						String hostname = server.getKey();
-						if (serverAvailability.get(hostname) && !block.hasServerBeenCalled(hostname)) {
+						if (!block.hasServerBeenCalled(hostname)) {
 							potentialStubs.add(server);
 						}
 					}
-					System.out.println("Server Availability : " + serverAvailability.toString());
-					//System.out.println("Potential stubs : " + potentialStubs.size());
 
 					if (potentialStubs.size() > 0) {
 						
@@ -250,43 +230,6 @@ public class Balancer extends RemoteServer implements BalancerInterface {
 			if (++index >= blocks.size())
 				index = 0;
 		}
-
-		/*
-		 * int nbOpsATraiter = operations.size(); int q =
-		 * this.servers.get("127.0.0.1").getAsInt(); int start = 0; int end = q;
-		 * 
-		 * // TODO : verifier la capacitÃ© // TODO : faire la repartition du travail
-		 * while (nbOpsATraiter > 0) { if (end > operations.size()) { end =
-		 * operations.size(); }
-		 * 
-		 * ServerInterface stub = serverStubs.get("127.0.0.1");
-		 * 
-		 * // Requete de calcul d'operation vers un serveur JsonObject request = new
-		 * JsonObject(); request.addProperty("login", this.login);
-		 * request.addProperty("password", this.password); request.add("operations",
-		 * this.getSubArray(operations, start, end));
-		 * 
-		 * JsonObject operationResponse = new
-		 * JsonParser().parse(stub.compute(request.toString())).getAsJsonObject();
-		 * boolean authenticated =
-		 * operationResponse.get("authenticated").getAsBoolean();
-		 * 
-		 * if (!authenticated) { response.addProperty("result", false);
-		 * response.addProperty("value",
-		 * "Le repartiteur ne peut pas s'authentifier aupres du service de repertoire de noms."
-		 * ); return response.toString(); }
-		 * 
-		 * boolean enoughCapacity =
-		 * operationResponse.get("enoughCapacity").getAsBoolean();
-		 * 
-		 * if (!enoughCapacity) { // n'a pas fonctionnee TODO : envoyer au prochain
-		 * serveur ou reesayer System.out.
-		 * println("Le serveur n'a pas assez de capacite pour traiter les ops"); } else
-		 * { int result = operationResponse.get("result").getAsInt(); value = (value +
-		 * result) % 5000; }
-		 * 
-		 * nbOpsATraiter -= (end - start); start += q; end += q; }
-		 */
 
 		response.addProperty("result", true);
 		response.addProperty("value", value);

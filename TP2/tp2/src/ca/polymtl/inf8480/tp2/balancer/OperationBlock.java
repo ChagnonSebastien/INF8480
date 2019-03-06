@@ -35,7 +35,6 @@ public class OperationBlock extends Thread {
 	}
 
 	public boolean hasServerBeenCalled(String hostname) {
-		System.out.println("2:" + this.serversCalled.toString());
 		return this.serversCalled.containsKey(hostname);
 	}
 
@@ -78,7 +77,6 @@ public class OperationBlock extends Thread {
 	}
 
 	public int getResult(boolean secured) throws Exception {
-		//System.out.println("1:" + serversCalled.toString());
 		if (secured) {
 			if (serversCalled.size() > 0) {
 				return serversCalled.values().toArray(new Integer[serversCalled.size()])[0];
