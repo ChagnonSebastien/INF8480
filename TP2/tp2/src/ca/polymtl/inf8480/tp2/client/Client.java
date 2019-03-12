@@ -1,3 +1,8 @@
+/*
+ * @authors : Sébastien Chagnon (1804702), Pierre To (1734636)
+ * TP2 - INF8480
+ */
+
 package ca.polymtl.inf8480.tp2.client;
 
 import java.io.File;
@@ -74,8 +79,11 @@ public class Client {
 				if (operations == null) {
 					System.out.println("Ce fichier d'operations n'existe pas.");
 				}
-				
+
+				// Calcul du temps pour exécuter le calcul des opérations
+				long start = System.currentTimeMillis();
 				JsonObject response = new JsonParser().parse(balancerStub.computeOperations(operations.toString())).getAsJsonObject();
+				long end = System.currentTimeMillis();
 				
 				boolean result = response.get("result").getAsBoolean();
 				
@@ -84,6 +92,7 @@ public class Client {
 				}
 				else {
 					System.out.println("Le resultat des operations du fichier " + operationFileName + " est " + response.get("value"));
+					System.out.println("Temps écoulé : " + (end - start) + " ms");
 				}
 			} catch (RemoteException e) {
 				e.printStackTrace();
