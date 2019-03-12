@@ -1,5 +1,5 @@
 /*
- * @authors : SÃ©bastien Chagnon (1804702), Pierre To (1734636)
+ * @authors : Sebastien Chagnon (1804702), Pierre To (1734636)
  * TP2 - INF8480
  */
 
@@ -23,6 +23,8 @@ import com.google.gson.JsonParser;
 import ca.polymtl.inf8480.tp2.shared.DirectoryInterface;
 import ca.polymtl.inf8480.tp2.shared.ServerInterface;
 
+// Execute les operations transmis par le repartiteur
+// Le serveur peut être configurer pour accepter un nombre maximale de requêtes ainsi que son taux de reponses malicieuses
 public class Server extends RemoteServer implements ServerInterface {
 
 	private static final long serialVersionUID = 4680914689425721831L;
@@ -33,19 +35,22 @@ public class Server extends RemoteServer implements ServerInterface {
 	double falseAnswerRatio = 0.0; // taux de reponse erronnee (serveur en mode securise : 0, non securise : 0.01 Ã  1)
 	int capacity = 0; // capacite du serveur (nombre d'operations mathematique)
 	
-	static Integer operationsCountAccepted = 0;
+	static Integer operationsCountAccepted = 0; // Nombre d'operations dans la queue du serveur
 	
-	private DirectoryInterface directoryStub = null;
+	private DirectoryInterface directoryStub = null; // Stub du service de repertoire de noms
 	
 	public static void main(String[] args) {
 		String hostname = "";
 		String directoryHostname = "";
 		
+		// IP du Serveur
 		if (args.length > 0) {
 			hostname = args[0];
 		} else {
 			hostname = "127.0.0.1";
 		}
+		
+		//IP du service de repertoire de noms
 		if (args.length > 1) {
 			directoryHostname = args[1];
 		} else {
@@ -62,6 +67,7 @@ public class Server extends RemoteServer implements ServerInterface {
 		this.directoryStub = loadDirectoryStub(directoryHostname);
 	}
 	
+	// Initialise le stub du service de repertoire de noms
 	private DirectoryInterface loadDirectoryStub(String directoryHostname) {
 		DirectoryInterface stub = null;
 
@@ -79,16 +85,22 @@ public class Server extends RemoteServer implements ServerInterface {
 		return stub;
 	}
 	
+	// Averti le service de repertoire de nom de son existence
 	private void logToDirectory() {
 		if (this.directoryStub != null) {
 			try {
 				JsonObject response = new JsonParser().parse(directoryStub.logServer(this.address)).getAsJsonObject();
 				
 				if (!response.get("result").getAsBoolean()) {
+					
+					// si le repertoire de noms ne reconnait pas le serveur
 					System.out.println(response.get("value").getAsString());
 					System.out.println("Exiting...");
 					System.exit(0);
+				
 				} else {
+					
+					// Initialise les parametres du serveur
 					JsonObject serverConfig = response.get("value").getAsJsonObject();
 							
 					this.port = serverConfig.get("port").getAsInt();
@@ -104,6 +116,7 @@ public class Server extends RemoteServer implements ServerInterface {
 		}
 	}
 	
+	// Méthode qui est appelée lors du démarage du serveur
 	private void run() {
 		this.logToDirectory();
 		
@@ -121,7 +134,10 @@ public class Server extends RemoteServer implements ServerInterface {
 		}
 	}
 	
+	// Verifie si le serveur est apte à accepter une nouvelle serie d'operations
 	private boolean checkCapacity(int operationSize) {
+		
+		// Mutex pour lire et editer la variable globale
 		synchronized (Server.operationsCountAccepted) {
 			int operationsCount = operationSize + Server.operationsCountAccepted;
 			double rejectionRatio = (operationsCount - this.capacity) / (5.0 * this.capacity);
@@ -130,6 +146,7 @@ public class Server extends RemoteServer implements ServerInterface {
 			// les operations sont acceptees si on respecte le ratio de rejet (plus grand que)
 			boolean isAccepted = currentRatio > rejectionRatio;
 			
+			// Modification du nombre d'operations dans la pile
 			if (isAccepted) {
 				Server.operationsCountAccepted += operationSize;
 			}
@@ -138,6 +155,7 @@ public class Server extends RemoteServer implements ServerInterface {
 		}
 	}
 
+	// Fonction appellee par le repartiteur pour calculer un bloc d'operations
 	@Override
 	public String compute(String request) throws RemoteException {
 		System.out.println("Nouvelle requete de calcul...");
@@ -150,6 +168,7 @@ public class Server extends RemoteServer implements ServerInterface {
 		JsonObject response = new JsonObject();
 		
 		try {
+			// Verification des identifiants du repartiteur 
 			if (directoryStub.authenticateBalancer(login, password)) {
 				System.out.println("Authentification reussi");
 				response.addProperty("authenticated", true);
@@ -158,19 +177,19 @@ public class Server extends RemoteServer implements ServerInterface {
 				boolean enoughCapacity = checkCapacity(operations.size());
 				response.addProperty("enoughCapacity", enoughCapacity);
 				if (!enoughCapacity) {
-					System.out.println("Capacite insufisante");
 					return response.toString();
 				}
 				
 				System.out.println("Capacite sufisante");
 				int result = 0;
 				
-				// serveur malicieux retourne une reponse aleatoire
+				// le serveur malicieux retourne une reponse aleatoire
 				if (this.falseAnswerRatio > Math.random()) {
 					System.out.println("<*.*>");
 					result = new Random().nextInt(5000);
 				}
 				
+				// execution des operations du bloc
 				for (JsonElement op : operations) {
 					String operation = op.getAsJsonObject().get("operation").getAsString();
 					int operande = op.getAsJsonObject().get("operande").getAsInt();
@@ -184,14 +203,16 @@ public class Server extends RemoteServer implements ServerInterface {
 					
 				}
 				
-				System.out.println("Reponse trouvee : " + result);
+				System.out.println("Resultat intermediaire : " + result);
 				response.addProperty("result", result);
 				
+				// Mutex pour editer la variable globale
 				synchronized (Server.operationsCountAccepted) {
 					Server.operationsCountAccepted -= operations.size();
 				}
 			}
 			else {
+				// L'authentification a echouee
 				System.out.println("Authentification echouee");
 				response.addProperty("authenticated", false);
 			}

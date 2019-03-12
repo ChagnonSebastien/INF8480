@@ -1,5 +1,5 @@
 /*
- * @authors : Sébastien Chagnon (1804702), Pierre To (1734636)
+ * @authors : Sebastien Chagnon (1804702), Pierre To (1734636)
  * TP2 - INF8480
  */
 

@@ -5,7 +5,6 @@
 
 package ca.polymtl.inf8480.tp2.balancer;
 
-import java.net.ConnectException;
 import java.rmi.RemoteException;
 import java.util.ArrayList;
 import java.util.HashMap;
