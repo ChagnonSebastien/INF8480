@@ -148,7 +148,7 @@ public class Balancer extends RemoteServer implements BalancerInterface {
 		JsonArray operations = new JsonParser().parse(ops).getAsJsonArray();
 		int value = 0;
 
-		// On cree des blocs d'oppération ayant pour taille la capacite minimale parmi
+		// On cree des blocs d'operation ayant pour taille la capacite minimale parmi
 		// tous les serveurs.
 		int qMin = Integer.MAX_VALUE;
 		for (String ip : servers.keySet()) {
@@ -180,7 +180,7 @@ public class Balancer extends RemoteServer implements BalancerInterface {
 		while (blocks.size() > 0) {
 
 			OperationBlock block = blocks.get(index);
-			// Si le Thread a terminé sa precedente execution
+			// Si le Thread a termine sa precedente execution
 			if (!block.isAlive()) {
 
 				// Retourne l'erreur au client si l'authentification echoue
@@ -192,10 +192,21 @@ public class Balancer extends RemoteServer implements BalancerInterface {
 				}
 
 				if (block.serverError) {
-					response.addProperty("result", false);
-					response.addProperty("value",
-							"Le repartiteur ne peut pas s'authentifier aupres du service de repertoire de noms.");
-					return response.toString();
+					String hostname = block.toCall.getKey();
+
+					if (this.servers.has(hostname)) {
+						this.servers.remove(hostname);
+					}
+
+					if (serverStubs.containsKey(hostname)) {
+						serverStubs.remove(hostname);
+					}
+
+					if (serverStubs.size() == 0) {
+						response.addProperty("result", false);
+						response.addProperty("value", "Il n'y a plus de serveur disponible");
+						return response.toString();
+					}
 				}
 				
 				try {
@@ -217,7 +228,6 @@ public class Balancer extends RemoteServer implements BalancerInterface {
 					}
 
 					if (potentialStubs.size() > 0) {
-						
 						OperationBlock newBlock = block.clone();
 						newBlock.toCall = potentialStubs.get(new Random().nextInt(potentialStubs.size()));
 						newBlock.start();

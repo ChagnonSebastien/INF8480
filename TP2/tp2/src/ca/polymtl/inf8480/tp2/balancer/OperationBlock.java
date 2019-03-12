@@ -1,5 +1,6 @@
 package ca.polymtl.inf8480.tp2.balancer;
 
+import java.net.ConnectException;
 import java.rmi.RemoteException;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -71,7 +72,7 @@ public class OperationBlock extends Thread {
 			}
 
 		} catch (RemoteException e) {
-			e.printStackTrace();
+			System.out.println("Le block d'operations " + this.getName() + " n'a pas pu avoir une reponse du serveur." );
 			this.serverError = true;
 		}
 	}
@@ -96,8 +97,8 @@ public class OperationBlock extends Thread {
 				throw new Exception(
 						"Les deux premiers serveurs appeles n'ont pas le meme resultat. Un troixieme serveur n'a pas encre ete contacte.");
 
-			// Il y a au maximum un serveur qui est malicieux donc le troisième serveur
-			// contacté est assurément fiable.
+			// Il y a au maximum un serveur qui est malicieux donc le troisieme serveur
+			// contacte est assurement fiable.
 			return results.get(2);
 		}
 	}

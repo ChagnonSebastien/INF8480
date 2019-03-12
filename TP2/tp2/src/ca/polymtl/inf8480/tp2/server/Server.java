@@ -130,8 +130,6 @@ public class Server extends RemoteServer implements ServerInterface {
 				Server.operationsCountAccepted += operationSize;
 			}
 			
-			System.out.println(operationSize + " " + Server.operationsCountAccepted + " " + rejectionRatio);
-			
 			return isAccepted;
 		}
 	}
