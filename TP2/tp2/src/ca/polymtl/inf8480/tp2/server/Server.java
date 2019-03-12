@@ -66,7 +66,6 @@ public class Server extends RemoteServer implements ServerInterface {
 		DirectoryInterface stub = null;
 
 		try {
-			System.out.println(directoryHostname +  " : ip");
 			Registry registry = LocateRegistry.getRegistry(directoryHostname, 5000);
 			stub = (DirectoryInterface) registry.lookup("directory");
 		} catch (NotBoundException e) {
