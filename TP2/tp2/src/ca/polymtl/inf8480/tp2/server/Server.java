@@ -171,19 +171,18 @@ public class Server extends RemoteServer implements ServerInterface {
 					System.out.println("<*.*>");
 					result = new Random().nextInt(5000);
 				}
-				// serveur avec bon resultat
-				else {
-					for (JsonElement op : operations) {
-						String operation = op.getAsJsonObject().get("operation").getAsString();
-						int operande = op.getAsJsonObject().get("operande").getAsInt();
-						
-						if (operation.equals("pell")) {
-							result = (result + Operations.pell(operande)) % 5000;
-						}
-						else if (operation.equals("prime")) {
-							result = (result + Operations.prime(operande)) % 5000;
-						}
+				
+				for (JsonElement op : operations) {
+					String operation = op.getAsJsonObject().get("operation").getAsString();
+					int operande = op.getAsJsonObject().get("operande").getAsInt();
+					
+					if (operation.equals("pell")) {
+						result = (result + Operations.pell(operande)) % 5000;
 					}
+					else if (operation.equals("prime")) {
+						result = (result + Operations.prime(operande)) % 5000;
+					}
+					
 				}
 				
 				System.out.println("Reponse trouvee : " + result);

@@ -95,16 +95,21 @@ public class OperationBlock extends Thread {
 				throw new Exception("Deux serveurs n'ont pas encore ete contactes.");
 
 			List<Integer> results = new ArrayList<Integer>(serversCalled.values());
-			if (results.get(0) == results.get(1))
+			if (results.get(0).intValue() == results.get(1).intValue()) {
 				return results.get(0);
+			}
 
 			if (serversCalled.size() < 3)
 				throw new Exception(
 						"Les deux premiers serveurs appeles n'ont pas le meme resultat. Un troixieme serveur n'a pas encre ete contacte.");
 
-			// Il y a au maximum un serveur qui est malicieux donc le troisieme serveur
-			// contacte est assurement fiable.
-			return results.get(2);
+			if (results.get(0).intValue() == results.get(1).intValue()) {
+				return results.get(0);
+			} else if (results.get(0).intValue() == results.get(2).intValue()) {
+				return results.get(2);
+			} else {
+				return results.get(1);
+			}
 		}
 	}
 	

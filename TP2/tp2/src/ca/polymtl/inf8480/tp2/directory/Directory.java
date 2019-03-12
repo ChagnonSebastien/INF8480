@@ -29,6 +29,7 @@ public class Directory extends RemoteServer implements DirectoryInterface {
 	File balancerFile = null;
 	JsonObject servers = null;
 	JsonObject configs = null;
+	JsonObject balancers = null;
 	
 	public static void main(String[] args) {
 		Directory directory = new Directory();
@@ -54,7 +55,13 @@ public class Directory extends RemoteServer implements DirectoryInterface {
 			System.out.println("Le fichier des repartiteurs autorises n'existe pas. Veuillez l'ajouter.");
 			System.exit(0);
 		}
-		
+
+		try {
+			balancers = new JsonParser().parse(new FileReader(this.balancerFile)).getAsJsonObject();
+		} catch (FileNotFoundException e) {
+			e.printStackTrace();
+		}
+
 		this.servers = new JsonObject();
 	}
 
@@ -104,20 +111,12 @@ public class Directory extends RemoteServer implements DirectoryInterface {
 	
 	@Override
 	public boolean authenticateBalancer(String login, String password) throws RemoteException {
-		try {
-			JsonObject balancers = new JsonParser().parse(new FileReader(this.balancerFile)).getAsJsonObject();
-			
-			if (!balancers.has(login)) {
-				return false;
-			}
-			
-			return balancers.get(login).getAsString().equals(password);
-		} catch (FileNotFoundException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
+
+		if (!balancers.has(login)) {
+			return false;
 		}
 		
-		return false;
+		return balancers.get(login).getAsString().equals(password);
 	}
 
 	
