@@ -28,6 +28,8 @@ import ca.polymtl.inf8480.tp2.shared.BalancerInterface;
 import ca.polymtl.inf8480.tp2.shared.DirectoryInterface;
 import ca.polymtl.inf8480.tp2.shared.ServerInterface;
 
+// Point d'entree du systeme au niveau du serveur
+// Repartit les operations parmi les serveurs de calcul
 public class Balancer extends RemoteServer implements BalancerInterface {
 
 	private static final long serialVersionUID = -3221999619303495281L;
@@ -70,6 +72,7 @@ public class Balancer extends RemoteServer implements BalancerInterface {
 		this.servers = new JsonObject();
 	}
 
+	// Retourne l'interface du service de repertoire de noms
 	private DirectoryInterface loadDirectoryStub(String directoryHostname) {
 		DirectoryInterface stub = null;
 
@@ -87,6 +90,7 @@ public class Balancer extends RemoteServer implements BalancerInterface {
 		return stub;
 	}
 
+	// Retourne les interfaces associees a chaque serveur de calcul
 	private Map<String, ServerInterface> loadServerStubs() {
 		Map<String, ServerInterface> serverStubs = new HashMap<>();
 
@@ -129,6 +133,7 @@ public class Balancer extends RemoteServer implements BalancerInterface {
 
 	}
 
+	// Retourne un sous-tableau du tableau fourni selon un debut et une fin
 	private JsonArray getSubArray(JsonArray array, int start, int end) {
 		JsonArray subArray = new JsonArray();
 
@@ -141,7 +146,7 @@ public class Balancer extends RemoteServer implements BalancerInterface {
 
 	@Override
 	public String computeOperations(String ops) throws RemoteException {
-		// Get server hostnames from directory
+		// Aller chercher les adresses ip des serveurs de calcul du service de repertoire de noms
 		System.out.println("Nouvelle requete de calcul...");
 		this.servers = new JsonParser().parse(directoryStub.getServers()).getAsJsonObject();
 
@@ -162,7 +167,7 @@ public class Balancer extends RemoteServer implements BalancerInterface {
 		int value = 0;
 
 		// On cree des blocs d'operation ayant pour taille la capacite minimale parmi
-		// tous les serveurs.
+		// tous les serveurs (repartition des operations)
 		int qMin = Integer.MAX_VALUE;
 		for (String ip : servers.keySet()) {
 			int q = servers.get(ip).getAsInt();
@@ -175,7 +180,7 @@ public class Balancer extends RemoteServer implements BalancerInterface {
 		int start = 0;
 		int end = qMin;
 
-		// Creation des Threads qui vont executer des blocs d'oprations.
+		// Creation des threads qui vont executer des blocs d'operations
 		List<OperationBlock> blocks = new ArrayList<>();
 		System.out.println("Creation des blocs d'operations...");
 		while (opsToProcess > 0) {
@@ -199,7 +204,7 @@ public class Balancer extends RemoteServer implements BalancerInterface {
 			// Si le Thread a termine sa precedente execution
 			if (!block.isAlive()) {
 
-				// Retourne l'erreur au client si l'authentification echoue
+				// Retourne l'erreur au client si l'authentification du repartiteur echoue
 				if (block.authenticationError) {
 					response.addProperty("result", false);
 					response.addProperty("value",
@@ -207,6 +212,8 @@ public class Balancer extends RemoteServer implements BalancerInterface {
 					return response.toString();
 				}
 
+				// Retourne l'erreur au client s'il n'y a plus aucun serveur disponible
+				// Gestion de pannes intempestives d'un serveur de calcul
 				if (block.serverError) {
 					String hostname = block.toCall.getKey();
 
@@ -226,14 +233,12 @@ public class Balancer extends RemoteServer implements BalancerInterface {
 				}
 				
 				try {
-					int result = block.getResult(this.secureMode);
+					int result = block.getResult(this.secureMode); // ceci peut retourner 3 exceptions qui indiquent que le resultat n'a pas encore ete calcule ou que le resultat n'est pas encore verifie (voir OperationBlock)
 					value += result;
 					value %= 5000;
 					blocks.remove(index);
-					
 				} catch (Exception e) {
-					// En attente d'une reponse fiable
-	
+					// En attente d'une reponse fiable (gestion de serveurs malicieux)
 					// Trouver un stub disponible pour l'execution du thead
 					List<Entry<String, ServerInterface>> potentialStubs = new ArrayList<>();
 					for (Entry<String, ServerInterface> server : serverStubs.entrySet()) {
@@ -243,6 +248,7 @@ public class Balancer extends RemoteServer implements BalancerInterface {
 						}
 					}
 
+					// Repartition de la tache
 					if (potentialStubs.size() > 0) {
 						OperationBlock newBlock = block.clone();
 						newBlock.toCall = potentialStubs.get(new Random().nextInt(potentialStubs.size()));

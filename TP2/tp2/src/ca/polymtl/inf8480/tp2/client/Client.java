@@ -21,6 +21,8 @@ import com.google.gson.JsonParser;
 
 import ca.polymtl.inf8480.tp2.shared.BalancerInterface;
 
+// Point d'entree du systeme
+// Prend le fichier des operations et demande au repartiteur de faire le calcul
 public class Client {
 
 	public static void main(String[] args) {
@@ -52,6 +54,7 @@ public class Client {
 		}
 	}
 
+	// Retourne l'interface du repartiteur
 	private BalancerInterface loadBalancerStub(String hostname) {
 		BalancerInterface stub = null;
 
@@ -80,7 +83,10 @@ public class Client {
 
 				// Calcul du temps pour exécuter le calcul des opérations
 				long start = System.currentTimeMillis();
+				
+				// Envoi des operations au repartiteur
 				JsonObject response = new JsonParser().parse(balancerStub.computeOperations(operations.toString())).getAsJsonObject();
+				
 				long end = System.currentTimeMillis();
 				
 				boolean result = response.get("result").getAsBoolean();
@@ -98,6 +104,7 @@ public class Client {
 		}
 	}
 
+	// Retourne un tableau en Json des operations du fichier
 	private JsonArray parseOperations(String operationFileName) {
 		File operationsFile = new File(operationFileName);
 		if (!operationsFile.exists()) {

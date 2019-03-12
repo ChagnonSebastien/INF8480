@@ -24,7 +24,7 @@ import ca.polymtl.inf8480.tp2.shared.DirectoryInterface;
 import ca.polymtl.inf8480.tp2.shared.ServerInterface;
 
 // Execute les operations transmis par le repartiteur
-// Le serveur peut être configurer pour accepter un nombre maximale de requêtes ainsi que son taux de reponses malicieuses
+// Le serveur peut etre configurer pour accepter un nombre maximale de requetes ainsi que son taux de reponses malicieuses
 public class Server extends RemoteServer implements ServerInterface {
 
 	private static final long serialVersionUID = 4680914689425721831L;
@@ -116,7 +116,7 @@ public class Server extends RemoteServer implements ServerInterface {
 		}
 	}
 	
-	// Méthode qui est appelée lors du démarage du serveur
+	// Methode qui est appelee lors du demarrage du serveur
 	private void run() {
 		this.logToDirectory();
 		
@@ -134,7 +134,7 @@ public class Server extends RemoteServer implements ServerInterface {
 		}
 	}
 	
-	// Verifie si le serveur est apte à accepter une nouvelle serie d'operations
+	// Verifie si le serveur est apte a accepter une nouvelle serie d'operations
 	private boolean checkCapacity(int operationSize) {
 		
 		// Mutex pour lire et editer la variable globale
@@ -155,7 +155,7 @@ public class Server extends RemoteServer implements ServerInterface {
 		}
 	}
 
-	// Fonction appellee par le repartiteur pour calculer un bloc d'operations
+	// Fonction appelee par le repartiteur pour calculer un bloc d'operations
 	@Override
 	public String compute(String request) throws RemoteException {
 		System.out.println("Nouvelle requete de calcul...");

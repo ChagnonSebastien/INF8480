@@ -20,6 +20,8 @@ import com.google.gson.JsonParser;
 
 import ca.polymtl.inf8480.tp2.shared.DirectoryInterface;
 
+//Service de repertoire de noms
+//RPC pour serveur et repartiteur
 public class Directory extends RemoteServer implements DirectoryInterface {
 
 	private static final long serialVersionUID = 5906690575291221944L;
@@ -39,17 +41,20 @@ public class Directory extends RemoteServer implements DirectoryInterface {
 	public Directory() {
 		super();
 		
+		// les configurations de serveurs se trouve dans le fichier server-config.json
 		this.serverConfigFile = new File("server-config.json");
 		if (!this.serverConfigFile.exists()) {
 			System.out.println("Le fichier de configuration n'existe pas. Veuillez l'ajouter.");
 			System.exit(0);
 		}
+		
 		try {
 			configs = new JsonParser().parse(new FileReader(this.serverConfigFile)).getAsJsonObject();
 		} catch (FileNotFoundException e) {
 			e.printStackTrace();
 		}
 
+		// le nom d'utilisateur et mot de passe des repartiteurs sont dans le fichier authorized-balancers.json
 		this.balancerFile = new File("authorized-balancers.json");
 		if (!this.balancerFile.exists()) {
 			System.out.println("Le fichier des repartiteurs autorises n'existe pas. Veuillez l'ajouter.");
@@ -80,6 +85,7 @@ public class Directory extends RemoteServer implements DirectoryInterface {
 		}
 	}
 
+	// Permet a un serveur de calcul de s'authentifier aupres du service de repertoire de noms pour obtenir ses informations (capacite, taux de reponses erronnes, port) selon son adresse ip
 	@Override
 	public String logServer(String hostname) throws RemoteException {
 		JsonObject response = new JsonObject();
@@ -100,15 +106,16 @@ public class Directory extends RemoteServer implements DirectoryInterface {
 		// Se souvenir de la capacite de chaque serveur
 		this.servers.addProperty(hostname, serverConfig.get("q").getAsInt());
 
-		
 		return response.toString();
 	}
 
+	// Retourne la liste des serveurs de calcul
 	@Override
 	public String getServers() throws RemoteException {
 		return this.servers.toString();
 	}
 	
+	// Authentifie un repartiteur selon les infos dans authorized-balancers.json
 	@Override
 	public boolean authenticateBalancer(String login, String password) throws RemoteException {
 

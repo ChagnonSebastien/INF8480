@@ -18,8 +18,10 @@ import com.google.gson.JsonParser;
 
 import ca.polymtl.inf8480.tp2.shared.ServerInterface;
 
+// Represente une tache pour le serveur de calcul (quelques operations a calculer)
 public class OperationBlock extends Thread {
 
+	// Attributs
 	JsonArray operations;
 	Map<String, Integer> serversCalled;
 
@@ -39,6 +41,7 @@ public class OperationBlock extends Thread {
 		this.setName(name);
 	}
 
+	// Indique si le serveur a l'adresse ip a deja ete appelle
 	public boolean hasServerBeenCalled(String hostname) {
 		return this.serversCalled.containsKey(hostname);
 	}
@@ -49,18 +52,20 @@ public class OperationBlock extends Thread {
 		capacityError = false;
 		serverError = false;
 
-		// Requete de calcul d'operation vers un serveur
+		// Requete de calcul d'operations vers un serveur
 		JsonObject request = new JsonObject();
 		request.addProperty("login", this.login);
 		request.addProperty("password", this.password);
 		request.add("operations", this.operations);
 
 		try {
+			// Envoi de la tache au serveur de calcul
 			JsonObject operationResponse = new JsonParser().parse(toCall.getValue().compute(request.toString()))
 					.getAsJsonObject();
+			
 			boolean authenticated = operationResponse.get("authenticated").getAsBoolean();
-
 			if (!authenticated) {
+				// Si le repartiteur n'a pas ete authentifie correctement
 				this.authenticationError = true;
 				return;
 			}
@@ -68,31 +73,35 @@ public class OperationBlock extends Thread {
 			boolean hasEnoughCapacity = operationResponse.get("enoughCapacity").getAsBoolean();
 
 			if (hasEnoughCapacity) {
+				// serveur a assez de capacite
 				int result = operationResponse.get("result").getAsInt();
 				serversCalled.put(toCall.getKey(), result);
 				capacityError = false;
 			} else {
+				// serveur n'a pas assez de capacite
 				capacityError = true;
 			}
-
 		} catch (RemoteException e) {
 			System.out.println("Le block d'operations " + this.getName() + " n'a pas pu avoir une reponse du serveur." );
 			this.serverError = true;
 		}
 	}
 
+	// Retourne le resultat du serveur de calcul
 	public int getResult(boolean secured) throws Exception {
 		if (secured) {
+			// Mode securise
 			if (serversCalled.size() > 0) {
 				return serversCalled.values().toArray(new Integer[serversCalled.size()])[0];
 			} else {
 				throw new Exception("Le serveur n'a pas encore ete contacte.");
 			}
-
 		} else {
+			// Mode non securise
 			if (serversCalled.size() < 2)
 				throw new Exception("Deux serveurs n'ont pas encore ete contactes.");
 
+			// Verification du resultat de deux serveurs de calculs
 			List<Integer> results = new ArrayList<Integer>(serversCalled.values());
 			if (results.get(0).intValue() == results.get(1).intValue()) {
 				return results.get(0);
@@ -102,6 +111,7 @@ public class OperationBlock extends Thread {
 				throw new Exception(
 						"Les deux premiers serveurs appeles n'ont pas le meme resultat. Un troixieme serveur n'a pas encre ete contacte.");
 
+			// Le resultat est bon pour deux serveurs de calcul en presence d'un serveur malicieux
 			if (results.get(0).intValue() == results.get(1).intValue()) {
 				return results.get(0);
 			} else if (results.get(0).intValue() == results.get(2).intValue()) {
@@ -112,6 +122,7 @@ public class OperationBlock extends Thread {
 		}
 	}
 	
+	// Retourne un bloc d'operation clone a partir du premier
 	public OperationBlock clone() {
 		OperationBlock newBlock = new OperationBlock(this.operations, this.login, this.password, this.getName());
 		newBlock.serversCalled = this.serversCalled;
