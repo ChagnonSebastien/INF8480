@@ -12,6 +12,13 @@
 	2i. Sur une console du laboratoire, tapez 'ssh L4712-XX' où XX représente un poste du laboratoire
 	2ii. Une fois sur le poste, tapez 'ifconfig' pour trouver l'adresse IP du poste (ex. 132.207.12.34)
 	2iii. Mettre à jour l'adresse IP d'un serveur sur fichier server-config.json
+	Exemple de mise à jour :
+	"132.207.12.34": {
+		"port": 5003,
+		"falseAnswerRatio": 0.0,
+		"q": 5
+	}
+	où la clé est l'adresse IP d'un serveur, port est le numéro du port, falseAnswerRatio est le mode de fonctionnement du serveur (0.0 : serveur de bonne foi, 1.0 : serveur toujours malicieux), q est la capacité du serveur de calcul
 	2iv. Attribuer un port différent entre 5002 à 5048 pour ce serveur
 
 ### B) Démarrage du service de répertoire de noms
