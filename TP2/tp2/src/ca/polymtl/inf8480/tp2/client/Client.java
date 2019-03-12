@@ -35,8 +35,6 @@ public class Client {
 			distantHostname = args[1];
 		}
 
-		System.out.println("distanthostname : " + distantHostname);
-
 		Client client = new Client(distantHostname);
 		client.run(args[0]);
 	}
@@ -92,7 +90,7 @@ public class Client {
 				}
 				else {
 					System.out.println("Le resultat des operations du fichier " + operationFileName + " est " + response.get("value"));
-					System.out.println("Temps écoulé : " + (end - start) + " ms");
+					System.out.println("Temps ecoule : " + (end - start) + " ms");
 				}
 			} catch (RemoteException e) {
 				e.printStackTrace();

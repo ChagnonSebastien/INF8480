@@ -1,5 +1,5 @@
 /*
- * @authors : Sébastien Chagnon (1804702), Pierre To (1734636)
+ * @authors : Sebastien Chagnon (1804702), Pierre To (1734636)
  * TP2 - INF8480
  */
 
@@ -108,9 +108,7 @@ public class Balancer extends RemoteServer implements BalancerInterface {
 			}
 
 			serverStubs.put(hostname, stub);
-			System.out.println("Loaded server stub " + hostname);
 		}
-		System.out.println("Loaded all server stubs");
 
 		return serverStubs;
 	}
@@ -171,7 +169,7 @@ public class Balancer extends RemoteServer implements BalancerInterface {
 			if (q < qMin)
 				qMin = q;
 		}
-		System.out.println("qMin = " + qMin);
+		System.out.println("Capacite minimale des serveurs de calculs : " + qMin);
 
 		int opsToProcess = operations.size();
 		int start = 0;
@@ -191,7 +189,6 @@ public class Balancer extends RemoteServer implements BalancerInterface {
 			start += qMin;
 			end += qMin;
 		}
-		System.out.println(blocks.size() + " blocs d'operations crees");
 
 		// Boucle d'execution
 		int index = 0;
@@ -235,12 +232,8 @@ public class Balancer extends RemoteServer implements BalancerInterface {
 					blocks.remove(index);
 					
 				} catch (Exception e) {
-
 					// En attente d'une reponse fiable
 	
-					System.out.println("Le bloc " + block.getName() + " n'a pas termine ses requetes");
-					
-					System.out.println(e.getMessage());
 					// Trouver un stub disponible pour l'execution du thead
 					List<Entry<String, ServerInterface>> potentialStubs = new ArrayList<>();
 					for (Entry<String, ServerInterface> server : serverStubs.entrySet()) {
@@ -249,9 +242,6 @@ public class Balancer extends RemoteServer implements BalancerInterface {
 							potentialStubs.add(server);
 						}
 					}
-					System.out.println(serverStubs.size() + " stubs totaux existants");
-					System.out.println(potentialStubs.size() + " stubs potentiels trouves");
-
 
 					if (potentialStubs.size() > 0) {
 						OperationBlock newBlock = block.clone();

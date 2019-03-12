@@ -51,8 +51,6 @@ public class Server extends RemoteServer implements ServerInterface {
 		} else {
 			directoryHostname = "127.0.0.1";
 		}
-		System.out.println(hostname +  " : hostname");
-		System.out.println(directoryHostname +  " : directoryHostname");
 
 		Server server = new Server(hostname, directoryHostname);
 		server.run();
