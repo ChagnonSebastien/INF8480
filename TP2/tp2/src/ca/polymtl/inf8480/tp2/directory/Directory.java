@@ -23,6 +23,7 @@ public class Directory extends RemoteServer implements DirectoryInterface {
 	File serverConfigFile = null;
 	File balancerFile = null;
 	JsonObject servers = null;
+	JsonObject configs = null;
 	
 	public static void main(String[] args) {
 		Directory directory = new Directory();
@@ -37,7 +38,12 @@ public class Directory extends RemoteServer implements DirectoryInterface {
 			System.out.println("Le fichier de configuration n'existe pas. Veuillez l'ajouter.");
 			System.exit(0);
 		}
-		
+		try {
+			configs = new JsonParser().parse(new FileReader(this.serverConfigFile)).getAsJsonObject();
+		} catch (FileNotFoundException e) {
+			e.printStackTrace();
+		}
+
 		this.balancerFile = new File("authorized-balancers.json");
 		if (!this.balancerFile.exists()) {
 			System.out.println("Le fichier des repartiteurs autorises n'existe pas. Veuillez l'ajouter.");
@@ -60,7 +66,6 @@ public class Directory extends RemoteServer implements DirectoryInterface {
 		} catch (Exception e) {
 			System.err.println("Erreur: " + e.getMessage());
 		}
-		
 	}
 
 	@Override
@@ -68,26 +73,21 @@ public class Directory extends RemoteServer implements DirectoryInterface {
 		JsonObject response = new JsonObject();
 		System.out.println("Le serveur " + hostname + " tente de se connecter au service de repertoire de noms.");
 		
-		try {
-			JsonObject configs = new JsonParser().parse(new FileReader(this.serverConfigFile)).getAsJsonObject();
-			
-			if (!configs.has(hostname)) {
-				System.out.println("L'addresse " + hostname + " n'existe pas dans le fichier de configuration.");
-				response.addProperty("result", false);
-				response.addProperty("value", "L'adresse du serveur n'existe pas dans le fichier de configuration.\nVeuillez l'ajouter dans server-config.json");
-				return response.toString();
-			}
-			
-			JsonObject serverConfig = configs.get(hostname).getAsJsonObject();
-						
-			response.addProperty("result", true);
-			response.add("value", serverConfig);
-			
-			// Se souvenir de la capacite de chaque serveur
-			this.servers.addProperty(hostname, serverConfig.get("q").getAsInt());
-		} catch (FileNotFoundException e) {
-			e.printStackTrace();
+		if (!configs.has(hostname)) {
+			System.out.println("L'addresse " + hostname + " n'existe pas dans le fichier de configuration.");
+			response.addProperty("result", false);
+			response.addProperty("value", "L'adresse du serveur n'existe pas dans le fichier de configuration.\nVeuillez l'ajouter dans server-config.json");
+			return response.toString();
 		}
+		
+		JsonObject serverConfig = configs.get(hostname).getAsJsonObject();
+					
+		response.addProperty("result", true);
+		response.add("value", serverConfig);
+		
+		// Se souvenir de la capacite de chaque serveur
+		this.servers.addProperty(hostname, serverConfig.get("q").getAsInt());
+
 		
 		return response.toString();
 	}

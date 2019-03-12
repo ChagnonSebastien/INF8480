@@ -41,10 +41,13 @@ public class Balancer extends RemoteServer implements BalancerInterface {
 
 		if (args.length > 0) {
 			secureMode = args[0].equals("true");
+		} else {
+			System.out.println("Vous devez fournir un mode de securite");
+			System.exit(0);
 		}
 
-		if (args.length > 1) {
-			directoryHostname = args[1];
+		if (args.length > 2) {
+			directoryHostname = args[2];
 		} else {
 			directoryHostname = "127.0.0.1";
 		}
@@ -82,8 +85,11 @@ public class Balancer extends RemoteServer implements BalancerInterface {
 	private Map<String, ServerInterface> loadServerStubs() {
 		Map<String, ServerInterface> serverStubs = new HashMap<>();
 
+		System.out.println("Loading server stubs...");
 		for (String hostname : this.servers.keySet()) {
+			System.out.println("Loading server stub " + hostname + "...");
 			ServerInterface stub = null;
+
 
 			try {
 				Registry registry = LocateRegistry.getRegistry(hostname, 5000);
@@ -97,7 +103,9 @@ public class Balancer extends RemoteServer implements BalancerInterface {
 			}
 
 			serverStubs.put(hostname, stub);
+			System.out.println("Loaded server stub " + hostname);
 		}
+		System.out.println("Loaded all server stubs");
 
 		return serverStubs;
 	}
@@ -131,6 +139,7 @@ public class Balancer extends RemoteServer implements BalancerInterface {
 	@Override
 	public String computeOperations(String ops) throws RemoteException {
 		// Get server hostnames from directory
+		System.out.println("Nouvelle requete de calcul...");
 		this.servers = new JsonParser().parse(directoryStub.getServers()).getAsJsonObject();
 
 		// Get server stubs
@@ -140,6 +149,7 @@ public class Balancer extends RemoteServer implements BalancerInterface {
 
 		// S'il n'y a aucun serveur enregistre dans le service de repertoire de noms
 		if (this.servers.keySet().size() == 0) {
+			System.out.println("Il n'y a pas de serveurs enregistres");
 			response.addProperty("result", false);
 			response.addProperty("value", "Il n'y a aucun serveur disponible.");
 			return response.toString();
@@ -156,6 +166,7 @@ public class Balancer extends RemoteServer implements BalancerInterface {
 			if (q < qMin)
 				qMin = q;
 		}
+		System.out.println("qMin = " + qMin);
 
 		int opsToProcess = operations.size();
 		int start = 0;
@@ -163,6 +174,7 @@ public class Balancer extends RemoteServer implements BalancerInterface {
 
 		// Creation des Threads qui vont executer des blocs d'oprations.
 		List<OperationBlock> blocks = new ArrayList<>();
+		System.out.println("Creation des blocs d'operations...");
 		while (opsToProcess > 0) {
 			if (end > operations.size()) {
 				end = operations.size();
@@ -174,9 +186,11 @@ public class Balancer extends RemoteServer implements BalancerInterface {
 			start += qMin;
 			end += qMin;
 		}
+		System.out.println(blocks.size() + " blocs d'operations crees");
 
 		// Boucle d'execution
 		int index = 0;
+		System.out.println("Debut des requetes");
 		while (blocks.size() > 0) {
 
 			OperationBlock block = blocks.get(index);
@@ -216,8 +230,12 @@ public class Balancer extends RemoteServer implements BalancerInterface {
 					blocks.remove(index);
 					
 				} catch (Exception e) {
+
 					// En attente d'une reponse fiable
 	
+					System.out.println("Le bloc " + block.getName() + " n'a pas termine ses requetes");
+					
+					System.out.println(e.getMessage());
 					// Trouver un stub disponible pour l'execution du thead
 					List<Entry<String, ServerInterface>> potentialStubs = new ArrayList<>();
 					for (Entry<String, ServerInterface> server : serverStubs.entrySet()) {
@@ -226,6 +244,9 @@ public class Balancer extends RemoteServer implements BalancerInterface {
 							potentialStubs.add(server);
 						}
 					}
+					System.out.println(serverStubs.size() + " stubs totaux existants");
+					System.out.println(potentialStubs.size() + " stubs potentiels trouves");
+
 
 					if (potentialStubs.size() > 0) {
 						OperationBlock newBlock = block.clone();

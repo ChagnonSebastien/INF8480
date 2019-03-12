@@ -1,13 +1,18 @@
 {
 	"132.207.12.34": {
 		"port": 5002,
-		"falseAnswerRatio": 0.0,
-		"q": 2
+		"falseAnswerRatio": 0.85,
+		"q": 5
 	},
 	"132.207.12.35": {
 		"port": 5003,
 		"falseAnswerRatio": 0.0,
-		"q": 3
+		"q": 5
+	},
+	"132.207.12.36": {
+		"port": 5004,
+		"falseAnswerRatio": 0.0,
+		"q": 5
 	},
 	"127.0.0.1": {
 		"port": 5049,

@@ -43,12 +43,17 @@ public class Server extends RemoteServer implements ServerInterface {
 		
 		if (args.length > 0) {
 			hostname = args[0];
-			directoryHostname = args[1];
 		} else {
 			hostname = "127.0.0.1";
+		}
+		if (args.length > 1) {
+			directoryHostname = args[1];
+		} else {
 			directoryHostname = "127.0.0.1";
 		}
-		
+		System.out.println(hostname +  " : hostname");
+		System.out.println(directoryHostname +  " : directoryHostname");
+
 		Server server = new Server(hostname, directoryHostname);
 		server.run();
 	}
@@ -63,6 +68,7 @@ public class Server extends RemoteServer implements ServerInterface {
 		DirectoryInterface stub = null;
 
 		try {
+			System.out.println(directoryHostname +  " : ip");
 			Registry registry = LocateRegistry.getRegistry(directoryHostname, 5000);
 			stub = (DirectoryInterface) registry.lookup("directory");
 		} catch (NotBoundException e) {
@@ -137,6 +143,7 @@ public class Server extends RemoteServer implements ServerInterface {
 
 	@Override
 	public String compute(String request) throws RemoteException {
+		System.out.println("Nouvelle requete de calcul...");
 		JsonObject requestJson = new JsonParser().parse(request).getAsJsonObject();
 		
 		String login = requestJson.get("login").getAsString();
@@ -147,19 +154,23 @@ public class Server extends RemoteServer implements ServerInterface {
 		
 		try {
 			if (directoryStub.authenticateBalancer(login, password)) {
+				System.out.println("Authentification reussi");
 				response.addProperty("authenticated", true);
 
 				// serveur verifie s'il n'est pas surcharge
 				boolean enoughCapacity = checkCapacity(operations.size());
 				response.addProperty("enoughCapacity", enoughCapacity);
 				if (!enoughCapacity) {
+					System.out.println("Capacite insufisante");
 					return response.toString();
 				}
 				
+				System.out.println("Capacite sufisante");
 				int result = 0;
 				
 				// serveur malicieux retourne une reponse aleatoire
 				if (this.falseAnswerRatio > Math.random()) {
+					System.out.println("<*.*>");
 					result = new Random().nextInt(5000);
 				}
 				// serveur avec bon resultat
@@ -177,6 +188,7 @@ public class Server extends RemoteServer implements ServerInterface {
 					}
 				}
 				
+				System.out.println("Reponse trouvee : " + result);
 				response.addProperty("result", result);
 				
 				synchronized (Server.operationsCountAccepted) {
@@ -184,6 +196,7 @@ public class Server extends RemoteServer implements ServerInterface {
 				}
 			}
 			else {
+				System.out.println("Authentification echouee");
 				response.addProperty("authenticated", false);
 			}
 		}

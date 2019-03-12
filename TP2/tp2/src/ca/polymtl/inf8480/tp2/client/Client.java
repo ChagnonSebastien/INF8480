@@ -30,6 +30,8 @@ public class Client {
 			distantHostname = args[1];
 		}
 
+		System.out.println("distanthostname : " + distantHostname);
+
 		Client client = new Client(distantHostname);
 		client.run(args[0]);
 	}

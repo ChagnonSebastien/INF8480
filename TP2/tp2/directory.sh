@@ -23,4 +23,4 @@ java -cp "$basepath"/directory.jar:"$basepath"/shared.jar \
   -Djava.security.manager \
   -Djava.security.policy="$basepath"/policy \
   -Djava.rmi.server.hostname="$IPADDR" \
-  ca.polymtl.inf8480.tp2.directory.Directory
+  ca.polymtl.inf8480.tp2.directory.Directory $*
