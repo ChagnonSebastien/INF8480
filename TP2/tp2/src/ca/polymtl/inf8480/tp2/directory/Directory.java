@@ -66,13 +66,15 @@ public class Directory extends RemoteServer implements DirectoryInterface {
 	@Override
 	public String logServer(String hostname) throws RemoteException {
 		JsonObject response = new JsonObject();
+		System.out.println("Le serveur " + hostname + " tente de se connecter au service de repertoire de noms.");
 		
 		try {
 			JsonObject configs = new JsonParser().parse(new FileReader(this.serverConfigFile)).getAsJsonObject();
 			
 			if (!configs.has(hostname)) {
+				System.out.println("L'addresse " + hostname + " n'existe pas dans le fichier de configuration.");
 				response.addProperty("result", false);
-				response.addProperty("value", "L'adresse du serveur n'existe pas dans le fichier de configuration.");
+				response.addProperty("value", "L'adresse du serveur n'existe pas dans le fichier de configuration.\nVeuillez l'ajouter dans server-config.json");
 				return response.toString();
 			}
 			

@@ -83,13 +83,14 @@ public class Server extends RemoteServer implements ServerInterface {
 				
 				if (!response.get("result").getAsBoolean()) {
 					System.out.println(response.get("value").getAsString());
+					System.out.println("Exiting...");
+					System.exit(0);
 				} else {
 					JsonObject serverConfig = response.get("value").getAsJsonObject();
 							
 					this.port = serverConfig.get("port").getAsInt();
 					this.falseAnswerRatio = serverConfig.get("falseAnswerRatio").getAsDouble();
 					this.capacity = serverConfig.get("q").getAsInt();
-					
 				}
 			} catch (RemoteException e) {
 				e.printStackTrace();

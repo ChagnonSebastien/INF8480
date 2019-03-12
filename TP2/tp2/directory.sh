@@ -6,9 +6,9 @@ popd > /dev/null
 
 cat << EndOfMessage
 HELP: 
-./directory.sh ip_address
-	- ip_address: (OPTIONAL) L'addresse ip du service de repertoire de noms.
-	  Si l'arguement est non fourni, on conisdere que le service est local (ip_address = 127.0.0.1)
+./directory.sh directory_address
+	- directory_address: (OPTIONAL) L'addresse ip du service de repertoire de noms.
+	  Si l'argument est non fourni, on considere que le service est local (ip_address = 127.0.0.1)
 
 EndOfMessage
 
